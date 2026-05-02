@@ -762,13 +762,19 @@ const Valentina = {
     inp.oninput = () => { inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,120)+'px'; };
     inp.onkeydown = e => { if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); Valentina.send(); } };
 
-    Valentina._appendAI('¡Hola! 👋 Soy Valentina, tu asistente de Finca SantaFe. Dame un momento para revisar los datos…');
+    const nombre = (App.profile?.nombre||'').split(' ')[0] || 'amigo';
+    const nivel  = App.profile?.nivel ?? 3;
+    Valentina._appendAI(`¡Hola ${nombre}! 👋 Soy Valentina, la asistente inteligente de Finca SantaFe. Dame un momento para revisar todos los datos de la finca…`);
 
     Valentina._buildContext().then(ctx => {
       Valentina._context = ctx;
       Valentina._setStatus('ready', 'Lista');
       inp.disabled = false; btn.disabled = false;
-      Valentina._appendAI('¡Listo! 🌿 Ya revisé todo. Puedes preguntarme sobre el ganado, gastos, ingresos, cosechas o lo que necesites. ¿En qué te ayudo hoy?');
+      const owner = Valentina._ownerName || 'el propietario';
+      const readyMsg = nivel === 0
+        ? `¡Listo ${nombre}! 🌿 Ya revisé todo. Pregúntame sobre el ganado, gastos, ingresos, cosechas, contactos o lo que necesites. ¿En qué te ayudo?`
+        : `¡Listo! 🌿 Ya leí todos los datos de la finca. ${owner} me ha pedido que te ayude en todo lo que necesites en Finca SantaFe. ¿Cómo puedo ayudarte?`;
+      Valentina._appendAI(readyMsg);
       inp.focus();
     }).catch(e => {
       Valentina._setStatus('error', 'Error');
@@ -793,68 +799,107 @@ const Valentina = {
     const lastM = ym(prev);
     const ctx   = [];
 
-    const [ganadoS, gastosS, ingresosS, camadasS, agricolaS] = await Promise.all([
-      db.collection('ganado').limit(100).get(),
-      db.collection('gastos').orderBy('fecha','desc').limit(60).get(),
-      db.collection('ingresos').orderBy('fecha','desc').limit(60).get(),
-      db.collection('camadas').orderBy('fecha','desc').limit(30).get(),
-      db.collection('agricola').limit(80).get()
+    const [ganadoS, gastosS, ingresosS, camadasS, agricolaS, contactosS, tareasS, eventosS, usuariosS] = await Promise.all([
+      db.collection('ganado').get(),
+      db.collection('gastos').orderBy('fecha','desc').get(),
+      db.collection('ingresos').orderBy('fecha','desc').get(),
+      db.collection('camadas').orderBy('fecha','desc').get(),
+      db.collection('agricola').get(),
+      db.collection('contactos').get(),
+      db.collection('tareas').get(),
+      db.collection('eventos').orderBy('fecha','desc').get(),
+      db.collection('usuarios').get()
     ]);
+
+    // Nombre del propietario para saludo a empleados
+    const ownerDoc = usuariosS.docs.find(d=>d.data().nivel===0);
+    Valentina._ownerName = ownerDoc ? (ownerDoc.data().nombre||'').split(' ')[0] || 'el propietario' : 'el propietario';
 
     // Ganado
     const gan   = ganadoS.docs.map(d=>d.data());
     const vivos = gan.filter(a=>!['vendido','muerto'].includes(a.estado));
-    if (vivos.length) {
+    if (gan.length) {
       const pesos = vivos.filter(a=>a.pesoActual>0).map(a=>a.pesoActual);
       const gdps  = vivos.filter(a=>a.gdp>0).map(a=>a.gdp);
       const esp   = vivos.reduce((m,a)=>{const k=a.especie||'otros';m[k]=(m[k]||0)+1;return m},{});
-      ctx.push(`GANADO — ${vivos.length} cabezas activas (total: ${gan.length})
+      ctx.push(`GANADO — ${vivos.length} activas | ${gan.filter(a=>a.estado==='vendido').length} vendidas | ${gan.filter(a=>a.estado==='muerto').length} bajas
 Por especie: ${Object.entries(esp).map(([k,v])=>`${k}: ${v}`).join(' | ')}
 Peso promedio: ${pesos.length?(pesos.reduce((s,p)=>s+p,0)/pesos.length).toFixed(1)+' kg':'N/D'}
-GDP promedio: ${gdps.length?(gdps.reduce((s,g)=>s+g,0)/gdps.length).toFixed(3)+' kg/día':'N/D'} (${gdps.length} animales con datos)`);
+GDP promedio: ${gdps.length?(gdps.reduce((s,g)=>s+g,0)/gdps.length).toFixed(3)+' kg/día':'N/D'} (${gdps.length} con datos)
+${vivos.filter(a=>a.nombre||a.codigo).slice(0,12).map(a=>`- ${a.nombre||a.codigo}: ${a.especie||''}, ${a.pesoActual||0} kg${a.gdp?' | GDP '+a.gdp+' kg/d':''}`).join('\n')}`);
     }
 
-    // Gastos e Ingresos
-    const gas   = gastosS.docs.map(d=>d.data());
-    const gEste = gas.filter(g=>g.fecha?.startsWith(thisM)).reduce((s,g)=>s+(g.monto||0),0);
-    const gAnt  = gas.filter(g=>g.fecha?.startsWith(lastM)).reduce((s,g)=>s+(g.monto||0),0);
+    // Gastos
+    const gas    = gastosS.docs.map(d=>d.data());
+    const gEste  = gas.filter(g=>g.fecha?.startsWith(thisM)).reduce((s,g)=>s+(g.monto||0),0);
+    const gAnt   = gas.filter(g=>g.fecha?.startsWith(lastM)).reduce((s,g)=>s+(g.monto||0),0);
+    const gTotal = gas.reduce((s,g)=>s+(g.monto||0),0);
     if (gas.length) {
-      const cats = gas.slice(0,40).reduce((m,g)=>{const k=g.categoria||'otros';m[k]=(m[k]||0)+(g.monto||0);return m},{});
-      const top  = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k}: $${v.toFixed(0)}`).join(' | ');
-      ctx.push(`GASTOS
-Este mes (${thisM}): $${gEste.toFixed(2)} — Mes anterior (${lastM}): $${gAnt.toFixed(2)}
-Principales categorías: ${top}`);
+      const cats = gas.reduce((m,g)=>{const k=g.categoria||'otros';m[k]=(m[k]||0)+(g.monto||0);return m},{});
+      const top  = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`${k}: $${v.toFixed(0)}`).join(' | ');
+      ctx.push(`GASTOS — ${gas.length} registros | Total histórico: $${gTotal.toFixed(2)}
+Este mes (${thisM}): $${gEste.toFixed(2)} | Mes anterior (${lastM}): $${gAnt.toFixed(2)}
+Por categoría: ${top}
+Últimos registros:
+${gas.slice(0,6).map(g=>`- ${g.fecha||''} [${g.categoria||''}]: $${g.monto||0}${g.descripcion?' — '+g.descripcion:''}`).join('\n')}`);
     }
 
-    const ing   = ingresosS.docs.map(d=>d.data());
-    const iEste = ing.filter(i=>i.fecha?.startsWith(thisM)).reduce((s,i)=>s+(i.monto||0),0);
-    const iAnt  = ing.filter(i=>i.fecha?.startsWith(lastM)).reduce((s,i)=>s+(i.monto||0),0);
+    // Ingresos
+    const ing    = ingresosS.docs.map(d=>d.data());
+    const iEste  = ing.filter(i=>i.fecha?.startsWith(thisM)).reduce((s,i)=>s+(i.monto||0),0);
+    const iAnt   = ing.filter(i=>i.fecha?.startsWith(lastM)).reduce((s,i)=>s+(i.monto||0),0);
+    const iTotal = ing.reduce((s,i)=>s+(i.monto||0),0);
     if (ing.length) {
-      ctx.push(`INGRESOS
-Este mes (${thisM}): $${iEste.toFixed(2)} — Mes anterior (${lastM}): $${iAnt.toFixed(2)}
-Balance neto este mes: $${(iEste-gEste).toFixed(2)}`);
+      const iCats = ing.reduce((m,i)=>{const k=i.categoria||i.concepto||'otros';m[k]=(m[k]||0)+(i.monto||0);return m},{});
+      const iTop  = Object.entries(iCats).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k}: $${v.toFixed(0)}`).join(' | ');
+      ctx.push(`INGRESOS — ${ing.length} registros | Total histórico: $${iTotal.toFixed(2)}
+Este mes (${thisM}): $${iEste.toFixed(2)} | Mes anterior (${lastM}): $${iAnt.toFixed(2)}
+Balance neto este mes: $${(iEste-gEste).toFixed(2)} | Balance histórico: $${(iTotal-gTotal).toFixed(2)}
+Por concepto: ${iTop}`);
     }
 
     // Camadas
     const cam = camadasS.docs.map(d=>d.data());
     if (cam.length) {
       const act = cam.filter(c=>!['vendida','muerta'].includes(c.estado));
-      ctx.push(`CAMADAS — ${act.length} activas de ${cam.length} total
-Última: ${cam[0]?.fecha||'N/D'} | ${cam[0]?.especie||''} | ${cam[0]?.cantidad||0} crías`);
+      const totCrias = cam.reduce((s,c)=>s+(c.cantidad||0),0);
+      ctx.push(`CAMADAS — ${act.length} activas | ${cam.length} total | ${totCrias} crías registradas
+${cam.slice(0,8).map(c=>`- ${c.fecha||''} ${c.especie||''}: ${c.cantidad||0} crías, estado: ${c.estado||'activa'}${c.madre?' madre: '+c.madre:''}`).join('\n')}`);
     }
 
-    // Agrícola
-    const agr     = agricolaS.docs.map(d=>({...d.data()}));
-    const lotes   = agr.filter(a=>a.hectareas||a.cultivo||a.tipo==='lote');
-    const tareas  = agr.filter(a=>!lotes.includes(a));
-    const pend    = tareas.filter(t=>t.estado!=='completada');
+    // Lotes agrícolas
+    const agr   = agricolaS.docs.map(d=>({...d.data()}));
+    const lotes = agr.filter(a=>a.hectareas||a.cultivo||a.tipo==='lote');
     if (lotes.length) {
-      ctx.push(`LOTES AGRÍCOLAS (${lotes.length})
-${lotes.map(l=>`- ${l.nombre||'Sin nombre'}: ${l.hectareas||0} ha | cultivo: ${l.cultivo||'N/D'} | ${l.estado||'N/D'}`).join('\n')}`);
+      const haTotal = lotes.reduce((s,l)=>s+(parseFloat(l.hectareas)||0),0);
+      ctx.push(`LOTES AGRÍCOLAS — ${lotes.length} lotes | ${haTotal.toFixed(1)} ha totales
+${lotes.map(l=>`- ${l.nombre||'Sin nombre'}: ${l.hectareas||0} ha | cultivo: ${l.cultivo||'N/D'} | estado: ${l.estado||'N/D'}`).join('\n')}`);
     }
-    if (pend.length) {
-      ctx.push(`TAREAS PENDIENTES (${pend.length})
-${pend.slice(0,8).map(t=>`- [${t.prioridad||'normal'}] ${t.nombre||t.descripcion||'Sin nombre'}`).join('\n')}`);
+
+    // Tareas (colección separada)
+    const tar  = tareasS.docs.map(d=>d.data());
+    const pend = tar.filter(t=>t.estado!=='completada');
+    if (tar.length) {
+      ctx.push(`TAREAS — ${pend.length} pendientes | ${tar.length-pend.length} completadas
+${pend.slice(0,10).map(t=>`- [${t.prioridad||'normal'}] ${t.nombre||t.descripcion||'Sin nombre'}${t.fechaVence?' | vence: '+t.fechaVence:''}`).join('\n')}`);
+    }
+
+    // Contactos
+    const cont = contactosS.docs.map(d=>d.data());
+    if (cont.length) {
+      const tipos = cont.reduce((m,c)=>{const k=c.tipo||'otro';m[k]=(m[k]||0)+1;return m},{});
+      ctx.push(`CONTACTOS — ${cont.length} total
+Por tipo: ${Object.entries(tipos).map(([k,v])=>`${k}: ${v}`).join(' | ')}
+${cont.slice(0,10).map(c=>`- ${c.nombre||''} (${c.tipo||''}): ${c.telefono||c.email||''}`).join('\n')}`);
+    }
+
+    // Eventos próximos
+    const hoy  = new Date().toISOString().slice(0,10);
+    const evts = eventosS.docs.map(d=>d.data());
+    const prox = evts.filter(e=>e.fecha>=hoy).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).slice(0,8);
+    if (prox.length) {
+      ctx.push(`EVENTOS PRÓXIMOS
+${prox.map(e=>`- ${e.fecha||''}: ${e.titulo||e.nombre||'Sin título'}${e.descripcion?' — '+e.descripcion:''}`).join('\n')}`);
     }
 
     return ctx.join('\n\n') || 'No hay datos registrados aún en la finca.';
