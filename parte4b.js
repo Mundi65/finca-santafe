@@ -798,6 +798,7 @@ const Valentina = {
   async _buildContext() {
     const db = App.db;
     const ym = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const toDateStr = f => { if(!f)return ''; if(f.seconds)return new Date(f.seconds*1000).toISOString().slice(0,10); if(f.toDate)return f.toDate().toISOString().slice(0,10); return String(f).slice(0,10); };
     const now = new Date();
     const thisM = ym(now);
     const prev  = new Date(now); prev.setMonth(prev.getMonth()-1);
@@ -836,8 +837,8 @@ ${vivos.filter(a=>a.nombre||a.codigo).slice(0,12).map(a=>`- ${a.nombre||a.codigo
 
     // Gastos
     const gas    = gastosS.docs.map(d=>d.data());
-    const gEste  = gas.filter(g=>g.fecha?.startsWith(thisM)).reduce((s,g)=>s+(g.monto||0),0);
-    const gAnt   = gas.filter(g=>g.fecha?.startsWith(lastM)).reduce((s,g)=>s+(g.monto||0),0);
+    const gEste  = gas.filter(g=>toDateStr(g.fecha).startsWith(thisM)).reduce((s,g)=>s+(g.monto||0),0);
+    const gAnt   = gas.filter(g=>toDateStr(g.fecha).startsWith(lastM)).reduce((s,g)=>s+(g.monto||0),0);
     const gTotal = gas.reduce((s,g)=>s+(g.monto||0),0);
     if (gas.length) {
       const cats = gas.reduce((m,g)=>{const k=g.categoria||'otros';m[k]=(m[k]||0)+(g.monto||0);return m},{});
@@ -846,13 +847,13 @@ ${vivos.filter(a=>a.nombre||a.codigo).slice(0,12).map(a=>`- ${a.nombre||a.codigo
 Este mes (${thisM}): $${gEste.toFixed(2)} | Mes anterior (${lastM}): $${gAnt.toFixed(2)}
 Por categoría: ${top}
 Últimos registros:
-${gas.slice(0,6).map(g=>`- ${g.fecha||''} [${g.categoria||''}]: $${g.monto||0}${g.descripcion?' — '+g.descripcion:''}`).join('\n')}`);
+${gas.slice(0,6).map(g=>`- ${toDateStr(g.fecha)} [${g.categoria||''}]: $${g.monto||0}${g.descripcion?' — '+g.descripcion:''}`).join('\n')}`);
     }
 
     // Ingresos
     const ing    = ingresosS.docs.map(d=>d.data());
-    const iEste  = ing.filter(i=>i.fecha?.startsWith(thisM)).reduce((s,i)=>s+(i.monto||0),0);
-    const iAnt   = ing.filter(i=>i.fecha?.startsWith(lastM)).reduce((s,i)=>s+(i.monto||0),0);
+    const iEste  = ing.filter(i=>toDateStr(i.fecha).startsWith(thisM)).reduce((s,i)=>s+(i.monto||0),0);
+    const iAnt   = ing.filter(i=>toDateStr(i.fecha).startsWith(lastM)).reduce((s,i)=>s+(i.monto||0),0);
     const iTotal = ing.reduce((s,i)=>s+(i.monto||0),0);
     if (ing.length) {
       const iCats = ing.reduce((m,i)=>{const k=i.categoria||i.concepto||'otros';m[k]=(m[k]||0)+(i.monto||0);return m},{});
@@ -869,7 +870,7 @@ Por concepto: ${iTop}`);
       const act = cam.filter(c=>!['vendida','muerta'].includes(c.estado));
       const totCrias = cam.reduce((s,c)=>s+(c.cantidad||0),0);
       ctx.push(`CAMADAS — ${act.length} activas | ${cam.length} total | ${totCrias} crías registradas
-${cam.slice(0,8).map(c=>`- ${c.fecha||''} ${c.especie||''}: ${c.cantidad||0} crías, estado: ${c.estado||'activa'}${c.madre?' madre: '+c.madre:''}`).join('\n')}`);
+${cam.slice(0,8).map(c=>`- ${toDateStr(c.fecha)} ${c.especie||''}: ${c.cantidad||0} crías, estado: ${c.estado||'activa'}${c.madre?' madre: '+c.madre:''}`).join('\n')}`);
     }
 
     // Lotes agrícolas
@@ -901,10 +902,10 @@ ${cont.slice(0,10).map(c=>`- ${c.nombre||''} (${c.tipo||''}): ${c.telefono||c.em
     // Eventos próximos
     const hoy  = new Date().toISOString().slice(0,10);
     const evts = eventosS.docs.map(d=>d.data());
-    const prox = evts.filter(e=>e.fecha>=hoy).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).slice(0,8);
+    const prox = evts.filter(e=>toDateStr(e.fecha)>=hoy).sort((a,b)=>toDateStr(a.fecha).localeCompare(toDateStr(b.fecha))).slice(0,8);
     if (prox.length) {
       ctx.push(`EVENTOS PRÓXIMOS
-${prox.map(e=>`- ${e.fecha||''}: ${e.titulo||e.nombre||'Sin título'}${e.descripcion?' — '+e.descripcion:''}`).join('\n')}`);
+${prox.map(e=>`- ${toDateStr(e.fecha)}: ${e.titulo||e.nombre||'Sin título'}${e.descripcion?' — '+e.descripcion:''}`).join('\n')}`);
     }
 
     return ctx.join('\n\n') || 'No hay datos registrados aún en la finca.';
