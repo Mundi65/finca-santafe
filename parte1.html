@@ -597,6 +597,34 @@ textarea.fc{resize:vertical;min-height:76px}
 /* Scrollbar for sidebar */
 #sidebar::-webkit-scrollbar{width:4px}
 #sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+
+/* ── VALENTINA IA ─────────────────────────────────── */
+#mod-valentina{padding:0;background:var(--g50)}
+.val-wrap{display:flex;flex-direction:column;height:calc(100vh - var(--th) - var(--bh));max-width:800px;margin:0 auto;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.05)}
+@media(min-width:960px){.val-wrap{height:calc(100vh - var(--th))}}
+.val-hdr{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--verde);border-bottom:3px solid var(--dorado)}
+.val-av{width:52px;height:52px;min-width:52px;border-radius:50%;background:var(--dorado);color:var(--verde);font-size:1.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.val-nm{flex:1}.val-nm h2{font-size:1.2rem;font-weight:700;color:#fff;margin:0}.val-nm p{font-size:.78rem;color:rgba(255,255,255,.6);margin:0}
+.val-st{display:flex;align-items:center;gap:6px;font-size:.78rem;color:rgba(255,255,255,.65)}
+.val-dot{width:8px;height:8px;border-radius:50%;background:#52B788;animation:dot-pulse 2s infinite;flex-shrink:0}
+.val-dot.loading{background:var(--dorado-cl)}.val-dot.error{background:var(--rojo);animation:none}
+@keyframes dot-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.val-chat{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:14px}
+.val-msg{display:flex;align-items:flex-end;gap:10px;max-width:100%}
+.val-msg-user{flex-direction:row-reverse}
+.val-mav{width:34px;height:34px;min-width:34px;border-radius:50%;background:var(--dorado);color:var(--verde);font-size:.82rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.val-bbl{max-width:78%;padding:11px 15px;border-radius:18px;font-size:.93rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.val-msg-ai .val-bbl{background:var(--verde);color:#fff;border-bottom-left-radius:4px}
+.val-msg-user .val-bbl{background:var(--dorado);color:var(--verde);font-weight:500;border-bottom-right-radius:4px}
+.val-typing .val-bbl{display:flex;gap:5px;align-items:center;padding:13px 18px}
+.val-typing .val-bbl span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);animation:typ .9s infinite}
+.val-typing .val-bbl span:nth-child(2){animation-delay:.2s}.val-typing .val-bbl span:nth-child(3){animation-delay:.4s}
+@keyframes typ{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.val-inp-wrap{display:flex;align-items:flex-end;gap:10px;padding:12px 16px;background:#fff;border-top:2px solid var(--g200)}
+.val-inp{flex:1;border:2px solid var(--g300);border-radius:22px;padding:10px 16px;font-size:.95rem;font-family:inherit;resize:none;max-height:120px;overflow-y:auto;outline:none;transition:border-color .2s;background:var(--g50)}
+.val-inp:focus{border-color:var(--verde);background:#fff}.val-inp:disabled{opacity:.5;cursor:not-allowed}
+.val-snd{width:44px;height:44px;min-width:44px;border-radius:50%;background:var(--verde);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .1s}
+.val-snd:hover:not(:disabled){background:var(--verde-med);transform:scale(1.06)}.val-snd:disabled{background:var(--g400);cursor:not-allowed}
 </style>
 </head>
 <body>

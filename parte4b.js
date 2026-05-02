@@ -743,6 +743,186 @@ document.addEventListener('click', e => {
     Nav.closeSidebar();
 });
 
+// =====================================================
+// VALENTINA — AI Assistant
+// =====================================================
+const Valentina = {
+  _history: [],
+  _context: '',
+
+  load() {
+    Valentina._history = [];
+    const chat = document.getElementById('val-chat');
+    chat.innerHTML = '';
+    Valentina._setStatus('loading', 'Cargando datos…');
+    const inp = document.getElementById('val-input');
+    const btn = document.getElementById('val-send');
+    inp.disabled = true; btn.disabled = true;
+
+    inp.oninput = () => { inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,120)+'px'; };
+    inp.onkeydown = e => { if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); Valentina.send(); } };
+
+    Valentina._appendAI('¡Hola! 👋 Soy Valentina, tu asistente de Finca SantaFe. Dame un momento para revisar los datos…');
+
+    Valentina._buildContext().then(ctx => {
+      Valentina._context = ctx;
+      Valentina._setStatus('ready', 'Lista');
+      inp.disabled = false; btn.disabled = false;
+      Valentina._appendAI('¡Listo! 🌿 Ya revisé todo. Puedes preguntarme sobre el ganado, gastos, ingresos, cosechas o lo que necesites. ¿En qué te ayudo hoy?');
+      inp.focus();
+    }).catch(e => {
+      Valentina._setStatus('error', 'Error');
+      Valentina._appendAI('Ups 😅 No pude cargar todos los datos ('+e.message+'). Igual puedo ayudarte con preguntas generales.');
+      inp.disabled = false; btn.disabled = false;
+    });
+  },
+
+  _setStatus(type, text) {
+    const dot = document.querySelector('#mod-valentina .val-dot');
+    const txt = document.getElementById('val-status-text');
+    if (dot) dot.className = 'val-dot' + (type !== 'ready' ? ' '+type : '');
+    if (txt) txt.textContent = text;
+  },
+
+  async _buildContext() {
+    const db = App.db;
+    const ym = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const now = new Date();
+    const thisM = ym(now);
+    const prev  = new Date(now); prev.setMonth(prev.getMonth()-1);
+    const lastM = ym(prev);
+    const ctx   = [];
+
+    const [ganadoS, gastosS, ingresosS, camadasS, agricolaS] = await Promise.all([
+      db.collection('ganado').limit(100).get(),
+      db.collection('gastos').orderBy('fecha','desc').limit(60).get(),
+      db.collection('ingresos').orderBy('fecha','desc').limit(60).get(),
+      db.collection('camadas').orderBy('fecha','desc').limit(30).get(),
+      db.collection('agricola').limit(80).get()
+    ]);
+
+    // Ganado
+    const gan   = ganadoS.docs.map(d=>d.data());
+    const vivos = gan.filter(a=>!['vendido','muerto'].includes(a.estado));
+    if (vivos.length) {
+      const pesos = vivos.filter(a=>a.pesoActual>0).map(a=>a.pesoActual);
+      const gdps  = vivos.filter(a=>a.gdp>0).map(a=>a.gdp);
+      const esp   = vivos.reduce((m,a)=>{const k=a.especie||'otros';m[k]=(m[k]||0)+1;return m},{});
+      ctx.push(`GANADO — ${vivos.length} cabezas activas (total: ${gan.length})
+Por especie: ${Object.entries(esp).map(([k,v])=>`${k}: ${v}`).join(' | ')}
+Peso promedio: ${pesos.length?(pesos.reduce((s,p)=>s+p,0)/pesos.length).toFixed(1)+' kg':'N/D'}
+GDP promedio: ${gdps.length?(gdps.reduce((s,g)=>s+g,0)/gdps.length).toFixed(3)+' kg/día':'N/D'} (${gdps.length} animales con datos)`);
+    }
+
+    // Gastos e Ingresos
+    const gas   = gastosS.docs.map(d=>d.data());
+    const gEste = gas.filter(g=>g.fecha?.startsWith(thisM)).reduce((s,g)=>s+(g.monto||0),0);
+    const gAnt  = gas.filter(g=>g.fecha?.startsWith(lastM)).reduce((s,g)=>s+(g.monto||0),0);
+    if (gas.length) {
+      const cats = gas.slice(0,40).reduce((m,g)=>{const k=g.categoria||'otros';m[k]=(m[k]||0)+(g.monto||0);return m},{});
+      const top  = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k}: $${v.toFixed(0)}`).join(' | ');
+      ctx.push(`GASTOS
+Este mes (${thisM}): $${gEste.toFixed(2)} — Mes anterior (${lastM}): $${gAnt.toFixed(2)}
+Principales categorías: ${top}`);
+    }
+
+    const ing   = ingresosS.docs.map(d=>d.data());
+    const iEste = ing.filter(i=>i.fecha?.startsWith(thisM)).reduce((s,i)=>s+(i.monto||0),0);
+    const iAnt  = ing.filter(i=>i.fecha?.startsWith(lastM)).reduce((s,i)=>s+(i.monto||0),0);
+    if (ing.length) {
+      ctx.push(`INGRESOS
+Este mes (${thisM}): $${iEste.toFixed(2)} — Mes anterior (${lastM}): $${iAnt.toFixed(2)}
+Balance neto este mes: $${(iEste-gEste).toFixed(2)}`);
+    }
+
+    // Camadas
+    const cam = camadasS.docs.map(d=>d.data());
+    if (cam.length) {
+      const act = cam.filter(c=>!['vendida','muerta'].includes(c.estado));
+      ctx.push(`CAMADAS — ${act.length} activas de ${cam.length} total
+Última: ${cam[0]?.fecha||'N/D'} | ${cam[0]?.especie||''} | ${cam[0]?.cantidad||0} crías`);
+    }
+
+    // Agrícola
+    const agr     = agricolaS.docs.map(d=>({...d.data()}));
+    const lotes   = agr.filter(a=>a.hectareas||a.cultivo||a.tipo==='lote');
+    const tareas  = agr.filter(a=>!lotes.includes(a));
+    const pend    = tareas.filter(t=>t.estado!=='completada');
+    if (lotes.length) {
+      ctx.push(`LOTES AGRÍCOLAS (${lotes.length})
+${lotes.map(l=>`- ${l.nombre||'Sin nombre'}: ${l.hectareas||0} ha | cultivo: ${l.cultivo||'N/D'} | ${l.estado||'N/D'}`).join('\n')}`);
+    }
+    if (pend.length) {
+      ctx.push(`TAREAS PENDIENTES (${pend.length})
+${pend.slice(0,8).map(t=>`- [${t.prioridad||'normal'}] ${t.nombre||t.descripcion||'Sin nombre'}`).join('\n')}`);
+    }
+
+    return ctx.join('\n\n') || 'No hay datos registrados aún en la finca.';
+  },
+
+  _appendAI(text) {
+    const chat = document.getElementById('val-chat');
+    const d = document.createElement('div');
+    d.className = 'val-msg val-msg-ai';
+    const bbl = document.createElement('div'); bbl.className = 'val-bbl'; bbl.textContent = text;
+    d.innerHTML = '<div class="val-mav">V</div>';
+    d.appendChild(bbl);
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  },
+
+  _appendUser(text) {
+    const chat = document.getElementById('val-chat');
+    const d = document.createElement('div'); d.className = 'val-msg val-msg-user';
+    const bbl = document.createElement('div'); bbl.className = 'val-bbl'; bbl.textContent = text;
+    d.appendChild(bbl); chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  },
+
+  _showTyping() {
+    const chat = document.getElementById('val-chat');
+    const d = document.createElement('div');
+    d.className = 'val-msg val-msg-ai val-typing'; d.id = 'val-typ';
+    d.innerHTML = '<div class="val-mav">V</div><div class="val-bbl"><span></span><span></span><span></span></div>';
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  },
+
+  async send() {
+    const inp = document.getElementById('val-input');
+    const btn = document.getElementById('val-send');
+    const text = inp.value.trim();
+    if (!text || btn.disabled) return;
+
+    inp.value = ''; inp.style.height = 'auto';
+    inp.disabled = true; btn.disabled = true;
+
+    Valentina._appendUser(text);
+    Valentina._history.push({ role:'user', content:text });
+    Valentina._showTyping();
+
+    try {
+      const res = await fetch('/api/valentina', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ messages: Valentina._history.slice(-12), context: Valentina._context })
+      });
+      document.getElementById('val-typ')?.remove();
+
+      if (!res.ok) {
+        const e = await res.json().catch(()=>({}));
+        throw new Error(e.error || `HTTP ${res.status}`);
+      }
+      const data  = await res.json();
+      const reply = data.content?.[0]?.text || '(Sin respuesta)';
+      Valentina._history.push({ role:'assistant', content:reply });
+      Valentina._appendAI(reply);
+    } catch(e) {
+      document.getElementById('val-typ')?.remove();
+      Valentina._appendAI(`Oops, tuve un problemilla 😬 — ${e.message}. ¿Le intentamos de nuevo?`);
+    } finally {
+      inp.disabled = false; btn.disabled = false; inp.focus();
+    }
+  }
+};
+
 // Keyboard: ESC closes modal
 document.addEventListener('keydown', e => { if(e.key==='Escape')UI.closeModal(); });
 

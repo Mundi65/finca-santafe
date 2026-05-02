@@ -597,6 +597,34 @@ textarea.fc{resize:vertical;min-height:76px}
 /* Scrollbar for sidebar */
 #sidebar::-webkit-scrollbar{width:4px}
 #sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+
+/* ── VALENTINA IA ─────────────────────────────────── */
+#mod-valentina{padding:0;background:var(--g50)}
+.val-wrap{display:flex;flex-direction:column;height:calc(100vh - var(--th) - var(--bh));max-width:800px;margin:0 auto;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.05)}
+@media(min-width:960px){.val-wrap{height:calc(100vh - var(--th))}}
+.val-hdr{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--verde);border-bottom:3px solid var(--dorado)}
+.val-av{width:52px;height:52px;min-width:52px;border-radius:50%;background:var(--dorado);color:var(--verde);font-size:1.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.val-nm{flex:1}.val-nm h2{font-size:1.2rem;font-weight:700;color:#fff;margin:0}.val-nm p{font-size:.78rem;color:rgba(255,255,255,.6);margin:0}
+.val-st{display:flex;align-items:center;gap:6px;font-size:.78rem;color:rgba(255,255,255,.65)}
+.val-dot{width:8px;height:8px;border-radius:50%;background:#52B788;animation:dot-pulse 2s infinite;flex-shrink:0}
+.val-dot.loading{background:var(--dorado-cl)}.val-dot.error{background:var(--rojo);animation:none}
+@keyframes dot-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.val-chat{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:14px}
+.val-msg{display:flex;align-items:flex-end;gap:10px;max-width:100%}
+.val-msg-user{flex-direction:row-reverse}
+.val-mav{width:34px;height:34px;min-width:34px;border-radius:50%;background:var(--dorado);color:var(--verde);font-size:.82rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.val-bbl{max-width:78%;padding:11px 15px;border-radius:18px;font-size:.93rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.val-msg-ai .val-bbl{background:var(--verde);color:#fff;border-bottom-left-radius:4px}
+.val-msg-user .val-bbl{background:var(--dorado);color:var(--verde);font-weight:500;border-bottom-right-radius:4px}
+.val-typing .val-bbl{display:flex;gap:5px;align-items:center;padding:13px 18px}
+.val-typing .val-bbl span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);animation:typ .9s infinite}
+.val-typing .val-bbl span:nth-child(2){animation-delay:.2s}.val-typing .val-bbl span:nth-child(3){animation-delay:.4s}
+@keyframes typ{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.val-inp-wrap{display:flex;align-items:flex-end;gap:10px;padding:12px 16px;background:#fff;border-top:2px solid var(--g200)}
+.val-inp{flex:1;border:2px solid var(--g300);border-radius:22px;padding:10px 16px;font-size:.95rem;font-family:inherit;resize:none;max-height:120px;overflow-y:auto;outline:none;transition:border-color .2s;background:var(--g50)}
+.val-inp:focus{border-color:var(--verde);background:#fff}.val-inp:disabled{opacity:.5;cursor:not-allowed}
+.val-snd{width:44px;height:44px;min-width:44px;border-radius:50%;background:var(--verde);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .1s}
+.val-snd:hover:not(:disabled){background:var(--verde-med);transform:scale(1.06)}.val-snd:disabled{background:var(--g400);cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -1458,6 +1486,33 @@ textarea.fc{resize:vertical;min-height:76px}
   </div>
 </section>
 
+
+<!-- ================================================
+     VALENTINA — AI Assistant
+     ================================================ -->
+<section id="mod-valentina" class="module">
+  <div class="val-wrap">
+    <div class="val-hdr">
+      <div class="val-av">V</div>
+      <div class="val-nm">
+        <h2>Valentina</h2>
+        <p>Asistente IA · Finca SantaFe</p>
+      </div>
+      <div class="val-st">
+        <span class="val-dot loading"></span>
+        <span id="val-status-text">Iniciando…</span>
+      </div>
+    </div>
+    <div class="val-chat" id="val-chat"></div>
+    <div class="val-inp-wrap">
+      <textarea id="val-input" class="val-inp" placeholder="Pregúntale algo a Valentina…" rows="1" disabled></textarea>
+      <button class="val-snd" id="val-send" onclick="Valentina.send()" disabled aria-label="Enviar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
   </main><!-- /main-content -->
 </div><!-- /app-screen -->
 
@@ -1943,7 +1998,8 @@ const Nav = {
     { id:'calendario', label:'Calendario',  icon:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
     { id:'contactos',  label:'Contactos',   icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>' },
     { id:'reportes',   label:'Reportes',    icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>' },
-    { id:'admin',      label:'Admin',       icon:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',  adminOnly: true }
+    { id:'admin',      label:'Admin',       icon:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',  adminOnly: true },
+    { id:'valentina',  label:'Valentina IA', icon:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>' }
   ],
 
   renderNav() {
@@ -1984,7 +2040,7 @@ const Nav = {
     // Load module data
     const loaders = { dashboard:Dashboard.load, gastos:Gastos.load, ingresos:Ingresos.load,
       camadas:Camadas.load, ganado:Ganado.load, agricola:Agricola.load,
-      calendario:Calendario.load, contactos:Contactos.load, reportes:Reportes.load, admin:Admin.load };
+      calendario:Calendario.load, contactos:Contactos.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
     if (loaders[id]) loaders[id]();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
@@ -3167,6 +3223,186 @@ document.addEventListener('click', e => {
   if(window.innerWidth<960&&sidebar?.classList.contains('open')&&!sidebar.contains(e.target)&&!document.querySelector('.hbtn')?.contains(e.target))
     Nav.closeSidebar();
 });
+
+// =====================================================
+// VALENTINA — AI Assistant
+// =====================================================
+const Valentina = {
+  _history: [],
+  _context: '',
+
+  load() {
+    Valentina._history = [];
+    const chat = document.getElementById('val-chat');
+    chat.innerHTML = '';
+    Valentina._setStatus('loading', 'Cargando datos…');
+    const inp = document.getElementById('val-input');
+    const btn = document.getElementById('val-send');
+    inp.disabled = true; btn.disabled = true;
+
+    inp.oninput = () => { inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,120)+'px'; };
+    inp.onkeydown = e => { if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); Valentina.send(); } };
+
+    Valentina._appendAI('¡Hola! 👋 Soy Valentina, tu asistente de Finca SantaFe. Dame un momento para revisar los datos…');
+
+    Valentina._buildContext().then(ctx => {
+      Valentina._context = ctx;
+      Valentina._setStatus('ready', 'Lista');
+      inp.disabled = false; btn.disabled = false;
+      Valentina._appendAI('¡Listo! 🌿 Ya revisé todo. Puedes preguntarme sobre el ganado, gastos, ingresos, cosechas o lo que necesites. ¿En qué te ayudo hoy?');
+      inp.focus();
+    }).catch(e => {
+      Valentina._setStatus('error', 'Error');
+      Valentina._appendAI('Ups 😅 No pude cargar todos los datos ('+e.message+'). Igual puedo ayudarte con preguntas generales.');
+      inp.disabled = false; btn.disabled = false;
+    });
+  },
+
+  _setStatus(type, text) {
+    const dot = document.querySelector('#mod-valentina .val-dot');
+    const txt = document.getElementById('val-status-text');
+    if (dot) dot.className = 'val-dot' + (type !== 'ready' ? ' '+type : '');
+    if (txt) txt.textContent = text;
+  },
+
+  async _buildContext() {
+    const db = App.db;
+    const ym = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const now = new Date();
+    const thisM = ym(now);
+    const prev  = new Date(now); prev.setMonth(prev.getMonth()-1);
+    const lastM = ym(prev);
+    const ctx   = [];
+
+    const [ganadoS, gastosS, ingresosS, camadasS, agricolaS] = await Promise.all([
+      db.collection('ganado').limit(100).get(),
+      db.collection('gastos').orderBy('fecha','desc').limit(60).get(),
+      db.collection('ingresos').orderBy('fecha','desc').limit(60).get(),
+      db.collection('camadas').orderBy('fecha','desc').limit(30).get(),
+      db.collection('agricola').limit(80).get()
+    ]);
+
+    // Ganado
+    const gan   = ganadoS.docs.map(d=>d.data());
+    const vivos = gan.filter(a=>!['vendido','muerto'].includes(a.estado));
+    if (vivos.length) {
+      const pesos = vivos.filter(a=>a.pesoActual>0).map(a=>a.pesoActual);
+      const gdps  = vivos.filter(a=>a.gdp>0).map(a=>a.gdp);
+      const esp   = vivos.reduce((m,a)=>{const k=a.especie||'otros';m[k]=(m[k]||0)+1;return m},{});
+      ctx.push(`GANADO — ${vivos.length} cabezas activas (total: ${gan.length})
+Por especie: ${Object.entries(esp).map(([k,v])=>`${k}: ${v}`).join(' | ')}
+Peso promedio: ${pesos.length?(pesos.reduce((s,p)=>s+p,0)/pesos.length).toFixed(1)+' kg':'N/D'}
+GDP promedio: ${gdps.length?(gdps.reduce((s,g)=>s+g,0)/gdps.length).toFixed(3)+' kg/día':'N/D'} (${gdps.length} animales con datos)`);
+    }
+
+    // Gastos e Ingresos
+    const gas   = gastosS.docs.map(d=>d.data());
+    const gEste = gas.filter(g=>g.fecha?.startsWith(thisM)).reduce((s,g)=>s+(g.monto||0),0);
+    const gAnt  = gas.filter(g=>g.fecha?.startsWith(lastM)).reduce((s,g)=>s+(g.monto||0),0);
+    if (gas.length) {
+      const cats = gas.slice(0,40).reduce((m,g)=>{const k=g.categoria||'otros';m[k]=(m[k]||0)+(g.monto||0);return m},{});
+      const top  = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k}: $${v.toFixed(0)}`).join(' | ');
+      ctx.push(`GASTOS
+Este mes (${thisM}): $${gEste.toFixed(2)} — Mes anterior (${lastM}): $${gAnt.toFixed(2)}
+Principales categorías: ${top}`);
+    }
+
+    const ing   = ingresosS.docs.map(d=>d.data());
+    const iEste = ing.filter(i=>i.fecha?.startsWith(thisM)).reduce((s,i)=>s+(i.monto||0),0);
+    const iAnt  = ing.filter(i=>i.fecha?.startsWith(lastM)).reduce((s,i)=>s+(i.monto||0),0);
+    if (ing.length) {
+      ctx.push(`INGRESOS
+Este mes (${thisM}): $${iEste.toFixed(2)} — Mes anterior (${lastM}): $${iAnt.toFixed(2)}
+Balance neto este mes: $${(iEste-gEste).toFixed(2)}`);
+    }
+
+    // Camadas
+    const cam = camadasS.docs.map(d=>d.data());
+    if (cam.length) {
+      const act = cam.filter(c=>!['vendida','muerta'].includes(c.estado));
+      ctx.push(`CAMADAS — ${act.length} activas de ${cam.length} total
+Última: ${cam[0]?.fecha||'N/D'} | ${cam[0]?.especie||''} | ${cam[0]?.cantidad||0} crías`);
+    }
+
+    // Agrícola
+    const agr     = agricolaS.docs.map(d=>({...d.data()}));
+    const lotes   = agr.filter(a=>a.hectareas||a.cultivo||a.tipo==='lote');
+    const tareas  = agr.filter(a=>!lotes.includes(a));
+    const pend    = tareas.filter(t=>t.estado!=='completada');
+    if (lotes.length) {
+      ctx.push(`LOTES AGRÍCOLAS (${lotes.length})
+${lotes.map(l=>`- ${l.nombre||'Sin nombre'}: ${l.hectareas||0} ha | cultivo: ${l.cultivo||'N/D'} | ${l.estado||'N/D'}`).join('\n')}`);
+    }
+    if (pend.length) {
+      ctx.push(`TAREAS PENDIENTES (${pend.length})
+${pend.slice(0,8).map(t=>`- [${t.prioridad||'normal'}] ${t.nombre||t.descripcion||'Sin nombre'}`).join('\n')}`);
+    }
+
+    return ctx.join('\n\n') || 'No hay datos registrados aún en la finca.';
+  },
+
+  _appendAI(text) {
+    const chat = document.getElementById('val-chat');
+    const d = document.createElement('div');
+    d.className = 'val-msg val-msg-ai';
+    const bbl = document.createElement('div'); bbl.className = 'val-bbl'; bbl.textContent = text;
+    d.innerHTML = '<div class="val-mav">V</div>';
+    d.appendChild(bbl);
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  },
+
+  _appendUser(text) {
+    const chat = document.getElementById('val-chat');
+    const d = document.createElement('div'); d.className = 'val-msg val-msg-user';
+    const bbl = document.createElement('div'); bbl.className = 'val-bbl'; bbl.textContent = text;
+    d.appendChild(bbl); chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  },
+
+  _showTyping() {
+    const chat = document.getElementById('val-chat');
+    const d = document.createElement('div');
+    d.className = 'val-msg val-msg-ai val-typing'; d.id = 'val-typ';
+    d.innerHTML = '<div class="val-mav">V</div><div class="val-bbl"><span></span><span></span><span></span></div>';
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  },
+
+  async send() {
+    const inp = document.getElementById('val-input');
+    const btn = document.getElementById('val-send');
+    const text = inp.value.trim();
+    if (!text || btn.disabled) return;
+
+    inp.value = ''; inp.style.height = 'auto';
+    inp.disabled = true; btn.disabled = true;
+
+    Valentina._appendUser(text);
+    Valentina._history.push({ role:'user', content:text });
+    Valentina._showTyping();
+
+    try {
+      const res = await fetch('/api/valentina', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ messages: Valentina._history.slice(-12), context: Valentina._context })
+      });
+      document.getElementById('val-typ')?.remove();
+
+      if (!res.ok) {
+        const e = await res.json().catch(()=>({}));
+        throw new Error(e.error || `HTTP ${res.status}`);
+      }
+      const data  = await res.json();
+      const reply = data.content?.[0]?.text || '(Sin respuesta)';
+      Valentina._history.push({ role:'assistant', content:reply });
+      Valentina._appendAI(reply);
+    } catch(e) {
+      document.getElementById('val-typ')?.remove();
+      Valentina._appendAI(`Oops, tuve un problemilla 😬 — ${e.message}. ¿Le intentamos de nuevo?`);
+    } finally {
+      inp.disabled = false; btn.disabled = false; inp.focus();
+    }
+  }
+};
 
 // Keyboard: ESC closes modal
 document.addEventListener('keydown', e => { if(e.key==='Escape')UI.closeModal(); });
