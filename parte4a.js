@@ -59,7 +59,7 @@ const Utils = {
     if (n === null || n === undefined || isNaN(n)) return '$0.00';
     return '$' + Number(n).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   },
-  parseDate: d => { if (!d) return null; if (typeof d?.toDate==='function') return d.toDate(); if (typeof d==='number') return new Date(d); if (typeof d==='string') return new Date(d+(d.includes('T')?'':'T00:00:00')); return null; },
+  parseDate: d => { if(!d)return null; if(d.seconds)return new Date(d.seconds*1000); if(typeof d?.toDate==='function')return d.toDate(); if(typeof d==='number')return new Date(d); if(typeof d==='string')return new Date(d+(d.includes('T')?'':'T00:00:00')); return null; },
   fmtDate: d => { const x=Utils.parseDate(d); if (!x||isNaN(x)) return '—'; return x.toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}); },
   fmtDateInput: d => { const x=Utils.parseDate(d); if (!x||isNaN(x)) return ''; return x.toISOString().split('T')[0]; },
   today: () => new Date().toISOString().split('T')[0],
@@ -616,7 +616,7 @@ const Gastos = {
         <td><span class="badge b-gris">${Utils.catLabel(g.categoria)}</span></td>
         <td>${Utils.sanitize(g.proveedor||'—')}</td>
         <td class="tw"><span class="money neg">${Utils.fmt$(g.monto)}</span></td>
-        <td class="ac">${g.facturaUrl||g.facturaB64?`<span class="bico" onclick="Gastos._openFactura('${g.id}')" title="Ver factura" style="font-size:1.25rem;color:var(--verde)">📄</span>`:`<span style="font-size:1.25rem;opacity:.3">📄</span>`}</td>
+        <td class="ac">${g.facturaUrl||g.facturaFoto||g.facturaB64?`<span class="bico" onclick="Gastos._openFactura('${g.id}')" title="Ver factura" style="font-size:1.25rem;color:var(--verde)">📄</span>`:`<span style="font-size:1.25rem;opacity:.3">📄</span>`}</td>
         <td class="ac">
           <button class="bico" onclick="Gastos.openForm('${g.id}')" title="Editar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -671,12 +671,12 @@ const Gastos = {
           <textarea id="gf-notas" class="fc" rows="2" placeholder="Observaciones adicionales…">${Utils.sanitize(g?.notas||'')}</textarea></div>
         <div class="fg"><label class="flbl">📄 Foto de factura</label>
           <div style="display:flex;gap:8px;margin-bottom:8px">
-            <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="gf-factura-cam">📷 Tomar foto</label>
+            <button type="button" onclick="document.getElementById('gf-factura-cam').click()" style="flex:1;padding:10px 8px;border:1.5px solid #1B4332;background:#D8F3DC;color:#1B4332;border-radius:8px;cursor:pointer;font-size:.87rem;font-weight:600">📷 Tomar foto</button>
             <input type="file" id="gf-factura-cam" accept="image/*" capture="environment" onchange="Gastos._previewFactura(this)" style="display:none">
-            <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="gf-factura-gal">🖼️ Subir imagen</label>
+            <button type="button" onclick="document.getElementById('gf-factura-gal').click()" style="flex:1;padding:10px 8px;border:1.5px solid #adb5bd;background:#f8f9fa;color:#495057;border-radius:8px;cursor:pointer;font-size:.87rem;font-weight:600">🖼️ Subir imagen</button>
             <input type="file" id="gf-factura-gal" accept="image/*,application/pdf" onchange="Gastos._previewFactura(this)" style="display:none">
           </div>
-          ${g?.facturaUrl||g?.facturaB64?`<div class="photo-prev"><img src="${g.facturaUrl||g.facturaB64}" alt="Factura" style="max-height:200px;object-fit:contain"><button class="photo-prev-rm" onclick="Gastos._clearFactura()">✕</button></div>`:'<div id="gf-prev"></div>'}
+          ${g?.facturaUrl||g?.facturaFoto||g?.facturaB64?`<div class="photo-prev"><img src="${g.facturaUrl||g.facturaFoto||g.facturaB64}" alt="Factura" style="max-height:200px;object-fit:contain"><button class="photo-prev-rm" onclick="Gastos._clearFactura()">✕</button></div>`:'<div id="gf-prev"></div>'}
         </div>`,
       onSave: () => Gastos.save(id)
     });
@@ -699,7 +699,7 @@ const Gastos = {
 
   _openFactura(id) {
     const g=Gastos._data.find(x=>x.id===id);
-    const url=g?.facturaUrl||g?.facturaB64; if(!url)return;
+    const url=g?.facturaUrl||g?.facturaFoto||g?.facturaB64; if(!url)return;
     if(url.startsWith('http')){window.open(url,'_blank');return;}
     const win=window.open('','_blank');
     if(win){win.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>`);win.document.close();}
@@ -718,7 +718,7 @@ const Gastos = {
     const file = document.getElementById('gf-factura-cam')?.files[0]||document.getElementById('gf-factura-gal')?.files[0];
     if (file) {
       UI.loading(true);
-      try { data.facturaB64 = await Utils.compressImg(file, 1200, 1600, 0.8); } catch(e){}
+      try { data.facturaFoto = await Utils.compressImg(file, 1200, 1600, 0.8); } catch(e){}
       UI.loading(false);
     }
     if (id) { await App.db.collection('gastos').doc(id).update(data); UI.showToast('Gasto actualizado','suc'); }

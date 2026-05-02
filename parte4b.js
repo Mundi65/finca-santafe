@@ -137,9 +137,9 @@ const Ganado = {
       <div class="fg"><label class="flbl">Notas</label><textarea id="af-notas" class="fc" rows="2">${Utils.sanitize(a?.notas||'')}</textarea></div>
       <div class="fg"><label class="flbl">Foto del animal</label>
         <div style="display:flex;gap:8px;margin-bottom:8px">
-          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="af-foto-cam">📷 Tomar foto</label>
+          <button type="button" onclick="document.getElementById('af-foto-cam').click()" style="flex:1;padding:10px 8px;border:1.5px solid #1B4332;background:#D8F3DC;color:#1B4332;border-radius:8px;cursor:pointer;font-size:.87rem;font-weight:600">📷 Tomar foto</button>
           <input type="file" id="af-foto-cam" accept="image/*" capture="environment" onchange="Ganado._previewFoto(this)" style="display:none">
-          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="af-foto-gal">🖼️ Subir imagen</label>
+          <button type="button" onclick="document.getElementById('af-foto-gal').click()" style="flex:1;padding:10px 8px;border:1.5px solid #adb5bd;background:#f8f9fa;color:#495057;border-radius:8px;cursor:pointer;font-size:.87rem;font-weight:600">🖼️ Subir imagen</button>
           <input type="file" id="af-foto-gal" accept="image/*" onchange="Ganado._previewFoto(this)" style="display:none">
         </div>
         <div id="af-prev">${a?.fotoUrl||a?.fotoB64?`<div class="photo-prev"><img src="${a.fotoUrl||a.fotoB64}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"></div>`:''}</div>

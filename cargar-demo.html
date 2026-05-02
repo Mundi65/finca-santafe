@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargar Datos Demo — Finca SantaFe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f2318;
+    color: #e8f5e9;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #1B4332;
+    border: 1px solid #2d6a4f;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 30px;
+  }
+  .star {
+    width: 50px;
+    height: 50px;
+    color: #C8922A;
+  }
+  h1 { font-size: 1.6rem; color: #C8922A; }
+  p { font-size: 0.85rem; color: #81c784; margin-top: 4px; }
+  .divider { border: none; border-top: 1px solid #2d6a4f; margin: 24px 0; }
+  .info-box {
+    background: rgba(200,146,42,0.1);
+    border: 1px solid rgba(200,146,42,0.3);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 0.9rem;
+    color: #ffd54f;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+  .btn-primary {
+    background: #C8922A;
+    color: #fff;
+  }
+  .btn-primary:hover { background: #e6a830; transform: translateY(-1px); }
+  .btn-primary:disabled { background: #555; cursor: not-allowed; transform: none; }
+  .log {
+    background: #0f2318;
+    border-radius: 10px;
+    padding: 16px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    max-height: 260px;
+    overflow-y: auto;
+    margin-top: 20px;
+    display: none;
+    line-height: 1.8;
+  }
+  .log.visible { display: block; }
+  .log .ok { color: #69f0ae; }
+  .log .err { color: #ff5252; }
+  .log .info { color: #82b1ff; }
+  .progress {
+    height: 6px;
+    background: #0f2318;
+    border-radius: 3px;
+    margin-top: 16px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress.visible { display: block; }
+  .progress-bar {
+    height: 100%;
+    background: #C8922A;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+  .success-msg {
+    text-align: center;
+    padding: 20px;
+    color: #69f0ae;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: none;
+  }
+  .success-msg.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <svg class="star" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill="#C8922A"/>
+    </svg>
+    <div>
+      <h1>Finca SantaFe</h1>
+      <p>DISTUCAR Cía. Ltda. — Cargador de datos demo</p>
+    </div>
+  </div>
+
+  <div class="info-box">
+    ⚠️ Esta herramienta carga datos <strong>ficticios de demostración</strong> directamente en tu Firestore.<br>
+    Incluye: ganado, camadas, gastos, ingresos, lotes agrícolas, contactos y tareas.<br>
+    Asegúrate de estar conectado a internet antes de continuar.
+  </div>
+
+  <button class="btn btn-primary" id="btnCargar" onclick="cargarDemos()">
+    🎲 Cargar todos los datos demo
+  </button>
+
+  <div class="progress" id="progressBar">
+    <div class="progress-bar" id="bar"></div>
+  </div>
+
+  <div class="success-msg" id="successMsg">
+    ✅ ¡Datos cargados! Abre la app y pregúntale a Valentina.
+  </div>
+
+  <div class="log" id="log"></div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDbi6l6egkEM-PiSl-D78Z_QDZEk5D-wOE",
+  authDomain: "finca-santafe.firebaseapp.com",
+  projectId: "finca-santafe",
+  storageBucket: "finca-santafe.firebasestorage.app",
+  messagingSenderId: "659720587208",
+  appId: "1:659720587208:web:bce17f33edcb1c827162fd",
+  measurementId: "G-XZVERRQXHC"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const LOG = document.getElementById('log');
+const BAR = document.getElementById('bar');
+const PROGRESS = document.getElementById('progressBar');
+const SUCCESS = document.getElementById('successMsg');
+const BTN = document.getElementById('btnCargar');
+
+function log(msg, tipo = 'info') {
+  LOG.classList.add('visible');
+  LOG.innerHTML += `<div class="${tipo}">${msg}</div>`;
+  LOG.scrollTop = LOG.scrollHeight;
+}
+
+function setProgress(p) {
+  PROGRESS.classList.add('visible');
+  BAR.style.width = p + '%';
+}
+
+const uid = 'USUARIO_UID'; // ← Se llenará dinámicamente
+
+const ahora = () => Timestamp.now();
+const hace = (dias) => Timestamp.fromDate(new Date(Date.now() - dias * 86400000));
+
+window.cargarDemos = async function() {
+  BTN.disabled = true;
+  BTN.textContent = '⏳ Cargando...';
+  log('🔐 Iniciando sesión...', 'info');
+
+  try {
+    const cred = await signInWithEmailAndPassword(auth, 'mundi.producciones@gmail.com', prompt('Ingresa tu contraseña de Finca SantaFe:'));
+    const userId = cred.user.uid;
+    log(`✅ Sesión iniciada como ${cred.user.email}`, 'ok');
+    setProgress(5);
+
+    // ── GANADO ────────────────────────────────────────────
+    log('🐄 Cargando ganado...', 'info');
+    const ganado = [
+      { nombre: 'Lucero', raza: 'Brahman', sexo: 'Hembra', color: 'Marrón', pesoIngreso: 180, pesoActual: 312, potrero: 'Potrero Norte', fechaIngreso: hace(120), estado: 'Activo', foto: '' },
+      { nombre: 'Toro Rey', raza: 'Brahman', sexo: 'Macho', color: 'Blanco', pesoIngreso: 250, pesoActual: 430, potrero: 'Potrero Sur', fechaIngreso: hace(200), estado: 'Activo', foto: '' },
+      { nombre: 'Manchita', raza: 'Holstein', sexo: 'Hembra', color: 'Blanco/Negro', pesoIngreso: 160, pesoActual: 290, potrero: 'Potrero Norte', fechaIngreso: hace(90), estado: 'Activo', foto: '' },
+      { nombre: 'Canela', raza: 'Mestiza', sexo: 'Hembra', color: 'Canela', pesoIngreso: 170, pesoActual: 305, potrero: 'Potrero Centro', fechaIngreso: hace(150), estado: 'Activo', foto: '' },
+      { nombre: 'Ciclón', raza: 'Brahman', sexo: 'Macho', color: 'Gris', pesoIngreso: 220, pesoActual: 410, potrero: 'Potrero Sur', fechaIngreso: hace(180), estado: 'Activo', foto: '' },
+      { nombre: 'Estrella', raza: 'Holstein', sexo: 'Hembra', color: 'Blanco/Negro', pesoIngreso: 155, pesoActual: 270, potrero: 'Potrero Norte', fechaIngreso: hace(60), estado: 'Activo', foto: '' },
+      { nombre: 'Tornado', raza: 'Angus', sexo: 'Macho', color: 'Negro', pesoIngreso: 240, pesoActual: 450, potrero: 'Potrero Sur', fechaIngreso: hace(240), estado: 'Activo', foto: '' },
+      { nombre: 'Paloma', raza: 'Mestiza', sexo: 'Hembra', color: 'Blanco', pesoIngreso: 165, pesoActual: 285, potrero: 'Potrero Centro', fechaIngreso: hace(75), estado: 'Activo', foto: '' },
+    ];
+    for (const animal of ganado) {
+      await addDoc(collection(db, 'ganado'), { ...animal, userId, creadoEn: ahora() });
+    }
+    log(`✅ ${ganado.length} animales cargados`, 'ok');
+    setProgress(20);
+
+    // ── CAMADAS ────────────────────────────────────────────
+    log('🐔 Cargando camadas...', 'info');
+    const camadas = [
+      { nombre: 'Lote Pollos #1', especie: 'Pollo de engorde', cantidad: 500, mortalidad: 12, fechaIngreso: hace(35), pesoPromedio: 1.8, estado: 'Activo', galpón: 'Galpón A' },
+      { nombre: 'Lote Gallinas Ponedoras', especie: 'Gallina ponedora', cantidad: 300, mortalidad: 3, fechaIngreso: hace(180), pesoPromedio: 1.9, estado: 'Activo', galpón: 'Galpón B', huevosDia: 280 },
+      { nombre: 'Camada Cerdos #3', especie: 'Cerdo', cantidad: 45, mortalidad: 2, fechaIngreso: hace(60), pesoPromedio: 38, estado: 'Activo', galpón: 'Porqueriza 1' },
+    ];
+    for (const camada of camadas) {
+      await addDoc(collection(db, 'camadas'), { ...camada, userId, creadoEn: ahora() });
+    }
+    log(`✅ ${camadas.length} camadas cargadas`, 'ok');
+    setProgress(35);
+
+    // ── GASTOS ────────────────────────────────────────────
+    log('💸 Cargando gastos...', 'info');
+    const gastos = [
+      { descripcion: 'Balanceado pollos 50kg x 10', categoria: 'Alimentación', monto: 280, proveedor: 'Agripac', fecha: hace(2), factura: 'F-001-2025' },
+      { descripcion: 'Vacuna aftosa ganado', categoria: 'Veterinario', monto: 145, proveedor: 'Vetec', fecha: hace(5), factura: 'F-002-2025' },
+      { descripcion: 'Fertilizante urea 5 sacos', categoria: 'Agrícola', monto: 210, proveedor: 'Fertiagro', fecha: hace(8), factura: 'F-003-2025' },
+      { descripcion: 'Mano de obra cosecha maíz', categoria: 'Mano de obra', monto: 320, proveedor: 'Jornaleros', fecha: hace(12), factura: '-' },
+      { descripcion: 'Diesel bomba de agua', categoria: 'Combustible', monto: 85, proveedor: 'Petroecuador', fecha: hace(15), factura: 'F-005-2025' },
+      { descripcion: 'Medicina antibiótico cerdos', categoria: 'Veterinario', monto: 95, proveedor: 'Vetec', fecha: hace(18), factura: 'F-006-2025' },
+      { descripcion: 'Reparación galpón techo', categoria: 'Mantenimiento', monto: 380, proveedor: 'Construcciones López', fecha: hace(22), factura: 'F-007-2025' },
+      { descripcion: 'Balanceado cerdos 40kg x 8', categoria: 'Alimentación', monto: 195, proveedor: 'Agripac', fecha: hace(25), factura: 'F-008-2025' },
+      { descripcion: 'Herbicida para potreros', categoria: 'Agrícola', monto: 130, proveedor: 'Fertiagro', fecha: hace(28), factura: 'F-009-2025' },
+      { descripcion: 'Luz eléctrica mensual', categoria: 'Servicios', monto: 67, proveedor: 'CNEL', fecha: hace(30), factura: 'F-010-2025' },
+      { descripcion: 'Transporte ganado a feria', categoria: 'Transporte', monto: 220, proveedor: 'Fletes Rápido', fecha: hace(35), factura: 'F-011-2025' },
+      { descripcion: 'Vitaminas y suplementos bovinos', categoria: 'Veterinario', monto: 160, proveedor: 'Agrovet', fecha: hace(40), factura: 'F-012-2025' },
+    ];
+    for (const gasto of gastos) {
+      await addDoc(collection(db, 'gastos'), { ...gasto, userId, creadoEn: ahora() });
+    }
+    log(`✅ ${gastos.length} gastos cargados`, 'ok');
+    setProgress(55);
+
+    // ── INGRESOS ────────────────────────────────────────────
+    log('💰 Cargando ingresos...', 'info');
+    const ingresos = [
+      { descripcion: 'Venta 200 pollos engorde', categoria: 'Avicultura', monto: 960, cliente: 'Distribuidora El Valle', fecha: hace(3) },
+      { descripcion: 'Venta 8 bovinos feria', categoria: 'Ganadería', monto: 4800, cliente: 'Subasta Machala', fecha: hace(10) },
+      { descripcion: 'Venta huevos (2000 unid)', categoria: 'Avicultura', monto: 340, cliente: 'Mercado Central', fecha: hace(14) },
+      { descripcion: 'Venta 15 cerdos engorde', categoria: 'Porcicultura', monto: 2250, cliente: 'Faenadora La Unión', fecha: hace(20) },
+      { descripcion: 'Venta maíz 5 quintales', categoria: 'Agrícola', monto: 275, cliente: 'Molino El Agro', fecha: hace(28) },
+      { descripcion: 'Venta leche mensual', categoria: 'Ganadería', monto: 640, cliente: 'Lácteos del Sur', fecha: hace(32) },
+    ];
+    for (const ingreso of ingresos) {
+      await addDoc(collection(db, 'ingresos'), { ...ingreso, userId, creadoEn: ahora() });
+    }
+    log(`✅ ${ingresos.length} ingresos cargados`, 'ok');
+    setProgress(70);
+
+    // ── LOTES AGRÍCOLAS ────────────────────────────────────────────
+    log('🌱 Cargando lotes agrícolas...', 'info');
+    const lotes = [
+      { nombre: 'Lote Maíz Norte', cultivo: 'Maíz amarillo', area: 5.5, unidad: 'ha', fechaSiembra: hace(85), estadoCultivo: 'En crecimiento', progreso: 65, rendimientoEsperado: '5 TM', observaciones: 'Buen desarrollo, aplicar segunda fertilización' },
+      { nombre: 'Lote Pasto Guinea', cultivo: 'Pasto guinea', area: 12, unidad: 'ha', fechaSiembra: hace(365), estadoCultivo: 'Producción', progreso: 100, rendimientoEsperado: 'Continuo', observaciones: 'Rotar con Potrero Norte en 15 días' },
+      { nombre: 'Lote Plátano', cultivo: 'Plátano barraganete', area: 3, unidad: 'ha', fechaSiembra: hace(280), estadoCultivo: 'Producción', progreso: 80, rendimientoEsperado: '200 racimos/mes', observaciones: 'Primera cosecha lista en 20 días' },
+    ];
+    for (const lote of lotes) {
+      await addDoc(collection(db, 'agricola'), { ...lote, userId, creadoEn: ahora() });
+    }
+    log(`✅ ${lotes.length} lotes agrícolas cargados`, 'ok');
+    setProgress(82);
+
+    // ── CONTACTOS ────────────────────────────────────────────
+    log('👥 Cargando contactos...', 'info');
+    const contactos = [
+      { nombre: 'Dr. Carlos Mora', tipo: 'Proveedor', categoria: 'Veterinario', telefono: '0999123456', email: 'carlmora@vetec.com', empresa: 'Vetec S.A.' },
+      { nombre: 'Luis Aguilar', tipo: 'Cliente', categoria: 'Avicultura', telefono: '0987654321', email: 'laguilar@distribuidora.com', empresa: 'Distribuidora El Valle' },
+      { nombre: 'Agripac Machala', tipo: 'Proveedor', categoria: 'Alimentación', telefono: '072123456', email: 'machala@agripac.com', empresa: 'Agripac S.A.' },
+      { nombre: 'Subasta Ganadera Machala', tipo: 'Cliente', categoria: 'Ganadería', telefono: '072987654', email: 'subastas@machala.com', empresa: 'Subasta Machala' },
+      { nombre: 'Fertiagro Ecuador', tipo: 'Proveedor', categoria: 'Agrícola', telefono: '0998765432', email: 'ventas@fertiagro.ec', empresa: 'Fertiagro Cía. Ltda.' },
+    ];
+    for (const contacto of contactos) {
+      await addDoc(collection(db, 'contactos'), { ...contacto, userId, creadoEn: ahora() });
+    }
+    log(`✅ ${contactos.length} contactos cargados`, 'ok');
+    setProgress(92);
+
+    // ── TAREAS ────────────────────────────────────────────
+    log('📋 Cargando tareas...', 'info');
+    const tareas = [
+      { titulo: 'Aplicar segunda fertilización maíz', modulo: 'Agrícola', prioridad: 'Alta', estado: 'Pendiente', fecha: hace(-3) },
+      { titulo: 'Vacunar lote pollos contra Newcastle', modulo: 'Camadas', prioridad: 'Alta', estado: 'Pendiente', fecha: hace(-1) },
+      { titulo: 'Pesaje mensual ganado Potrero Norte', modulo: 'Ganado', prioridad: 'Media', estado: 'Pendiente', fecha: hace(-5) },
+      { titulo: 'Rotar pasto — mover ganado Potrero Sur', modulo: 'Ganado', prioridad: 'Media', estado: 'Pendiente', fecha: hace(-7) },
+      { titulo: 'Revisión veterinaria cerdas gestantes', modulo: 'Camadas', prioridad: 'Alta', estado: 'Pendiente', fecha: hace(-2) },
+    ];
+    for (const tarea of tareas) {
+      await addDoc(collection(db, 'tareas'), { ...tarea, userId, creadoEn: ahora() });
+    }
+    log(`✅ ${tareas.length} tareas cargadas`, 'ok');
+    setProgress(100);
+
+    log('', 'info');
+    log('🎉 ¡Todo listo! Regresa a finca-santafe.vercel.app y habla con Valentina.', 'ok');
+    SUCCESS.classList.add('visible');
+    BTN.textContent = '✅ Datos cargados';
+
+  } catch (err) {
+    log(`❌ Error: ${err.message}`, 'err');
+    BTN.disabled = false;
+    BTN.textContent = '🎲 Cargar todos los datos demo';
+    console.error(err);
+  }
+}
+</script>
+</body>
+</html>
