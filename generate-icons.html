@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Generar Iconos - Finca SantaFe</title>
+<style>
+  body{font-family:sans-serif;background:#1B4332;display:flex;flex-direction:column;align-items:center;padding:30px;gap:20px}
+  h1{color:#C8922A;margin:0}p{color:rgba(255,255,255,.7);margin:0;font-size:.9rem;text-align:center}
+  canvas{display:none}
+  .btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+  button{background:#C8922A;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600}
+  button:hover{background:#A67520}
+  #status{color:#52B788;font-weight:600}
+</style>
+</head>
+<body>
+<h1>Generar Iconos PWA</h1>
+<p>Genera todos los íconos necesarios para la PWA de Finca SantaFe.<br>Se descargará un ZIP con todos los tamaños.</p>
+<canvas id="c"></canvas>
+<div class="btns">
+  <button onclick="genAll()">🎨 Generar y Descargar Todos los Iconos</button>
+</div>
+<p id="status"></p>
+
+<script>
+const SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
+
+function drawIcon(size) {
+  const c = document.getElementById('c');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  const cx = size/2, cy = size/2;
+
+  // Background
+  const grad = ctx.createRadialGradient(cx,cy*0.8,0,cx,cy,size*0.65);
+  grad.addColorStop(0,'#2D6A4F'); grad.addColorStop(1,'#1B4332');
+  ctx.fillStyle = grad;
+  roundRect(ctx, 0, 0, size, size, size*0.22);
+  ctx.fill();
+
+  // Star of David
+  const s = size * 0.35;
+  ctx.fillStyle = '#C8922A';
+  ctx.globalAlpha = 0.95;
+  // Triangle up
+  drawTri(ctx, cx, cy - s*0.35, s, false);
+  // Triangle down
+  drawTri(ctx, cx, cy + s*0.35, s, true);
+  ctx.globalAlpha = 1;
+
+  // Text below star (only for large icons)
+  if (size >= 192) {
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${size*0.085}px Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Finca SantaFe', cx, cy + s*0.92);
+  }
+
+  return c.toDataURL('image/png');
+}
+
+function drawTri(ctx, cx, cy, s, flip) {
+  const h = s * 0.866;
+  ctx.beginPath();
+  if (!flip) {
+    ctx.moveTo(cx, cy - h*0.67);
+    ctx.lineTo(cx + s*0.5, cy + h*0.33);
+    ctx.lineTo(cx - s*0.5, cy + h*0.33);
+  } else {
+    ctx.moveTo(cx, cy + h*0.67);
+    ctx.lineTo(cx + s*0.5, cy - h*0.33);
+    ctx.lineTo(cx - s*0.5, cy - h*0.33);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+function downloadDataURL(dataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = dataUrl; a.download = filename; a.click();
+}
+
+async function genAll() {
+  const status = document.getElementById('status');
+  status.textContent = 'Generando iconos…';
+  // Create icons folder instruction
+  if (!window.showDirectoryPicker) {
+    // Fallback: download each icon individually
+    for (let i = 0; i < SIZES.length; i++) {
+      const sz = SIZES[i];
+      status.textContent = `Descargando icon-${sz}.png…`;
+      await new Promise(r => setTimeout(r, 200));
+      downloadDataURL(drawIcon(sz), `icon-${sz}.png`);
+    }
+    status.textContent = `✓ ${SIZES.length} iconos descargados. Muévelos a la carpeta /icons/`;
+    return;
+  }
+  // Modern: pick directory
+  try {
+    const dir = await window.showDirectoryPicker({ startIn: 'documents' });
+    const iconsDir = await dir.getDirectoryHandle('icons', { create: true });
+    for (const sz of SIZES) {
+      status.textContent = `Generando icon-${sz}.png…`;
+      const dataUrl = drawIcon(sz);
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const fh = await iconsDir.getFileHandle(`icon-${sz}.png`, { create: true });
+      const w = await fh.createWritable();
+      await w.write(blob); await w.close();
+    }
+    status.textContent = `✓ ${SIZES.length} iconos guardados en /icons/`;
+  } catch(e) {
+    // Fallback
+    for (const sz of SIZES) {
+      await new Promise(r => setTimeout(r, 150));
+      downloadDataURL(drawIcon(sz), `icon-${sz}.png`);
+    }
+    status.textContent = `✓ Descargados. Mueve los archivos a la carpeta /icons/`;
+  }
+}
+
+// Preview
+window.onload = () => {
+  const prev = drawIcon(128);
+  const img = new Image(); img.src = prev; img.style = 'width:128px;height:128px;border-radius:28px;box-shadow:0 8px 30px rgba(0,0,0,.4)';
+  document.body.insertBefore(img, document.querySelector('.btns'));
+};
+</script>
+</body>
+</html>
