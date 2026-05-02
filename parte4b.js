@@ -235,6 +235,9 @@ const Agricola = {
       const pend=tarLote.filter(t=>t.estado!=='completada').length;
       const comp=tarLote.filter(t=>t.estado==='completada').length;
       const pct=tarLote.length?Math.round((comp/tarLote.length)*100):0;
+      const fs=Utils.parseDate(l.fechaSiembra),fc=Utils.parseDate(l.fechaCosechaEst),hoy=new Date();
+      let cultPct=0,cultInfo='';
+      if(fs&&fc&&fc>fs){const total=fc-fs,elapsed=Math.min(Math.max(hoy-fs,0),total);cultPct=Math.round((elapsed/total)*100);cultInfo=cultPct>=100?'🌾 Listo para cosechar':`🌱 ${cultPct}% del ciclo · ${Math.max(0,Math.round((fc-hoy)/86400000))} días para cosecha`;}
       return `<div class="lcard" onclick="Agricola.filterTareaLote('${l.id}');Agricola.switchTab('tareas',document.getElementById('tab-tareas'))">
         <div class="lcard-hd">
           <div><div class="lcard-name">${Utils.sanitize(l.nombre||'Sin nombre')}</div>
@@ -248,6 +251,7 @@ const Agricola = {
         <div class="lcard-stat"><span>Estado</span><span class="badge ${Utils.lotEstadoBadge(l.estado)}">${Utils.lotEstadoLabel(l.estado)}</span></div>
         <div class="lcard-stat"><span>Siembra</span><span>${Utils.fmtDate(l.fechaSiembra)}</span></div>
         <div class="lcard-stat"><span>Cosecha est.</span><span>${Utils.fmtDate(l.fechaCosechaEst)}</span></div>
+        ${cultInfo?`<div class="pb-wrap" style="margin:4px 0 2px"><div class="pb" style="width:${cultPct}%;background:${cultPct>=100?'#C8922A':'#2D6A4F'}"></div></div><div style="font-size:.7rem;color:var(--g600)">${cultInfo}</div>`:''}
         <div class="lcard-stat"><span>Tareas</span><span>${pend} pendientes · ${comp} completadas</span></div>
         <div class="pb-wrap"><div class="pb" style="width:${pct}%"></div></div>
         <div style="font-size:.7rem;color:var(--g600);margin-top:3px">${pct}% completado</div>

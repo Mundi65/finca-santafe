@@ -801,21 +801,21 @@ textarea.fc{resize:vertical;min-height:76px}
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B4332" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       </div>
       <div class="sc-val" id="ds-ingresos">$0</div>
-      <div class="sc-lbl">Ingresos del mes</div>
+      <div class="sc-lbl">Ingresos · últ. 30 días</div>
     </div>
     <div class="stat-card">
       <div class="sc-icon" style="background:#F8D7DA">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC3545" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
       </div>
       <div class="sc-val" id="ds-gastos">$0</div>
-      <div class="sc-lbl">Gastos del mes</div>
+      <div class="sc-lbl">Gastos · últ. 30 días</div>
     </div>
     <div class="stat-card">
       <div class="sc-icon" style="background:#CFE2FF">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D6EFD" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       </div>
       <div class="sc-val" id="ds-balance">$0</div>
-      <div class="sc-lbl">Balance del mes</div>
+      <div class="sc-lbl">Balance · últ. 30 días</div>
     </div>
     <div class="stat-card">
       <div class="sc-icon" style="background:#D8F3DC">
@@ -2082,30 +2082,33 @@ const Nav = {
 const Dashboard = {
   async load() {
     const now = new Date();
-    const msInicio = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-    const msFin    = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-31`;
+    const hace30   = new Date(now - 30*24*60*60*1000);
+    const anoInicio = new Date(now.getFullYear(), 0, 1);
     try {
       const [gSnap, iSnap, ganSnap, camSnap, lotSnap, tarSnap] = await Promise.all([
-        App.db.collection('gastos').where('fecha','>=',msInicio).where('fecha','<=',msFin).get(),
-        App.db.collection('ingresos').where('fecha','>=',msInicio).where('fecha','<=',msFin).get(),
+        App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
+        App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get(),
         App.db.collection('ganado').where('estado','==','activo').get(),
-        App.db.collection('camadas').where('fecha','>=',`${now.getFullYear()}-01-01`).get(),
+        App.db.collection('camadas').orderBy('fecha','desc').limit(200).get(),
         App.db.collection('agricola').get(),
         App.db.collection('tareas').where('estado','!=','completada').limit(5).get()
       ]);
-      const totalG = gSnap.docs.reduce((a,d)=>a+(d.data().monto||0),0);
-      const totalI = iSnap.docs.reduce((a,d)=>a+(d.data().monto||0),0);
+      const gastos30   = gSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
+      const ingresos30 = iSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
+      const camadasAno = camSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=anoInicio; });
+      const totalG = gastos30.reduce((a,d)=>a+(d.data().monto||0),0);
+      const totalI = ingresos30.reduce((a,d)=>a+(d.data().monto||0),0);
       document.getElementById('ds-gastos').textContent  = Utils.fmt$(totalG);
       document.getElementById('ds-gastos').className    = 'sc-val neg money neg';
       document.getElementById('ds-ingresos').textContent= Utils.fmt$(totalI);
       document.getElementById('ds-balance').textContent = Utils.fmt$(totalI - totalG);
       document.getElementById('ds-balance').className   = `sc-val money ${totalI>=totalG?'pos':'neg'}`;
       document.getElementById('ds-ganado').textContent  = ganSnap.size;
-      document.getElementById('ds-camadas').textContent = camSnap.size;
+      document.getElementById('ds-camadas').textContent = camadasAno.length;
       document.getElementById('ds-lotes').textContent   = lotSnap.size;
 
       // Last gastos
-      const lastG = gSnap.docs.slice(0,4);
+      const lastG = gastos30.slice(0,4);
       const lgEl = document.getElementById('dash-last-gastos');
       lgEl.innerHTML = lastG.length ? lastG.map(d=>{
         const g=d.data();
@@ -2114,7 +2117,7 @@ const Dashboard = {
           <div class="txs c-gris">${Utils.fmtDate(g.fecha)} · ${Utils.catLabel(g.categoria)}</div></div>
           <span class="money neg tsm">${Utils.fmt$(g.monto)}</span>
         </div>`;
-      }).join('') : '<div class="empty" style="padding:20px;border:none"><p>Sin gastos este mes</p></div>';
+      }).join('') : '<div class="empty" style="padding:20px;border:none"><p>Sin gastos en últimos 30 días</p></div>';
 
       // Pending tareas
       const tarEl = document.getElementById('dash-tareas');
@@ -2143,11 +2146,11 @@ const Dashboard = {
       });
       const ingData = Array(6).fill(0), gasData = Array(6).fill(0), catMap = {};
       const [gSnap, iSnap] = await Promise.all([
-        App.db.collection('gastos').where('fecha','>=',months[0].key+'-01').get(),
-        App.db.collection('ingresos').where('fecha','>=',months[0].key+'-01').get()
+        App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
+        App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get()
       ]);
-      gSnap.docs.forEach(d=>{ const g=d.data(); const k=g.fecha?.slice(0,7); const i=months.findIndex(m=>m.key===k); if(i>=0)gasData[i]+=(g.monto||0); catMap[g.categoria]=(catMap[g.categoria]||0)+(g.monto||0); });
-      iSnap.docs.forEach(d=>{ const g=d.data(); const k=g.fecha?.slice(0,7); const i=months.findIndex(m=>m.key===k); if(i>=0)ingData[i]+=(g.monto||0); });
+      gSnap.docs.forEach(d=>{ const g=d.data(); const x=Utils.parseDate(g.fecha); if(!x)return; const k=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`; const i=months.findIndex(m=>m.key===k); if(i>=0)gasData[i]+=(g.monto||0); catMap[g.categoria]=(catMap[g.categoria]||0)+(g.monto||0); });
+      iSnap.docs.forEach(d=>{ const g=d.data(); const x=Utils.parseDate(g.fecha); if(!x)return; const k=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`; const i=months.findIndex(m=>m.key===k); if(i>=0)ingData[i]+=(g.monto||0); });
 
       Charts.bar(document.getElementById('chart-ig'), months.map(m=>m.label), [
         { label:'Ingresos', data:ingData, color:'#1B4332' },
@@ -2186,7 +2189,7 @@ const Gastos = {
       const q = Gastos._q.toLowerCase();
       if (q && !((g.descripcion||'').toLowerCase().includes(q)||(g.proveedor||'').toLowerCase().includes(q))) return false;
       if (Gastos._cat && g.categoria !== Gastos._cat) return false;
-      if (Gastos._month && !(g.fecha||'').startsWith(Gastos._month)) return false;
+      if (Gastos._month) { const x=Utils.parseDate(g.fecha); const ym=x?`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`:''; if(ym!==Gastos._month)return false; }
       return true;
     });
   },
@@ -2216,7 +2219,7 @@ const Gastos = {
 
   stats() {
     const now = Utils.thisMonth();
-    const mes = Gastos._data.filter(g => (g.fecha||'').startsWith(now));
+    const mes = Gastos._data.filter(g => { const x=Utils.parseDate(g.fecha); if(!x)return false; return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`===now; });
     const total = mes.reduce((a,g)=>a+(g.monto||0),0);
     document.getElementById('g-total-mes').textContent = Utils.fmt$(total);
     document.getElementById('g-count-mes').textContent = mes.length;
@@ -2332,7 +2335,7 @@ const Ingresos = {
       const q=Ingresos._q.toLowerCase();
       if(q&&!((g.descripcion||'').toLowerCase().includes(q)||(g.cliente||'').toLowerCase().includes(q)))return false;
       if(Ingresos._cat&&g.categoria!==Ingresos._cat)return false;
-      if(Ingresos._month&&!(g.fecha||'').startsWith(Ingresos._month))return false;
+      if(Ingresos._month){ const x=Utils.parseDate(g.fecha); const ym=x?`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`:''; if(ym!==Ingresos._month)return false; }
       return true;
     });
   },
@@ -2356,7 +2359,7 @@ const Ingresos = {
   },
 
   stats() {
-    const now=Utils.thisMonth(), mes=Ingresos._data.filter(g=>(g.fecha||'').startsWith(now));
+    const now=Utils.thisMonth(), mes=Ingresos._data.filter(g=>{ const x=Utils.parseDate(g.fecha); if(!x)return false; return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`===now; });
     const total=mes.reduce((a,g)=>a+(g.monto||0),0);
     document.getElementById('i-total-mes').textContent=Utils.fmt$(total);
     document.getElementById('i-count-mes').textContent=mes.length;
@@ -2717,6 +2720,9 @@ const Agricola = {
       const pend=tarLote.filter(t=>t.estado!=='completada').length;
       const comp=tarLote.filter(t=>t.estado==='completada').length;
       const pct=tarLote.length?Math.round((comp/tarLote.length)*100):0;
+      const fs=Utils.parseDate(l.fechaSiembra),fc=Utils.parseDate(l.fechaCosechaEst),hoy=new Date();
+      let cultPct=0,cultInfo='';
+      if(fs&&fc&&fc>fs){const total=fc-fs,elapsed=Math.min(Math.max(hoy-fs,0),total);cultPct=Math.round((elapsed/total)*100);cultInfo=cultPct>=100?'🌾 Listo para cosechar':`🌱 ${cultPct}% del ciclo · ${Math.max(0,Math.round((fc-hoy)/86400000))} días para cosecha`;}
       return `<div class="lcard" onclick="Agricola.filterTareaLote('${l.id}');Agricola.switchTab('tareas',document.getElementById('tab-tareas'))">
         <div class="lcard-hd">
           <div><div class="lcard-name">${Utils.sanitize(l.nombre||'Sin nombre')}</div>
@@ -2730,6 +2736,7 @@ const Agricola = {
         <div class="lcard-stat"><span>Estado</span><span class="badge ${Utils.lotEstadoBadge(l.estado)}">${Utils.lotEstadoLabel(l.estado)}</span></div>
         <div class="lcard-stat"><span>Siembra</span><span>${Utils.fmtDate(l.fechaSiembra)}</span></div>
         <div class="lcard-stat"><span>Cosecha est.</span><span>${Utils.fmtDate(l.fechaCosechaEst)}</span></div>
+        ${cultInfo?`<div class="pb-wrap" style="margin:4px 0 2px"><div class="pb" style="width:${cultPct}%;background:${cultPct>=100?'#C8922A':'#2D6A4F'}"></div></div><div style="font-size:.7rem;color:var(--g600)">${cultInfo}</div>`:''}
         <div class="lcard-stat"><span>Tareas</span><span>${pend} pendientes · ${comp} completadas</span></div>
         <div class="pb-wrap"><div class="pb" style="width:${pct}%"></div></div>
         <div style="font-size:.7rem;color:var(--g600);margin-top:3px">${pct}% completado</div>

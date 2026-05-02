@@ -59,11 +59,12 @@ const Utils = {
     if (n === null || n === undefined || isNaN(n)) return '$0.00';
     return '$' + Number(n).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   },
-  fmtDate: d => { if (!d) return '—'; const x = new Date(d + 'T00:00:00'); return x.toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}); },
-  fmtDateInput: d => { if (!d) return ''; const x = new Date(d + 'T00:00:00'); return x.toISOString().split('T')[0]; },
+  parseDate: d => { if (!d) return null; if (typeof d?.toDate==='function') return d.toDate(); if (typeof d==='number') return new Date(d); if (typeof d==='string') return new Date(d+(d.includes('T')?'':'T00:00:00')); return null; },
+  fmtDate: d => { const x=Utils.parseDate(d); if (!x||isNaN(x)) return '—'; return x.toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}); },
+  fmtDateInput: d => { const x=Utils.parseDate(d); if (!x||isNaN(x)) return ''; return x.toISOString().split('T')[0]; },
   today: () => new Date().toISOString().split('T')[0],
   thisMonth: () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; },
-  daysBetween: (d1, d2) => Math.max(0, Math.round((new Date(d2) - new Date(d1)) / 86400000)),
+  daysBetween: (d1, d2) => { const a=Utils.parseDate(d1),b=Utils.parseDate(d2); if(!a||!b) return 0; return Math.max(0,Math.round((b-a)/86400000)); },
   initials: name => (name||'?').trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2),
   monthName: m => ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m],
   monthShort: m => ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][m],
@@ -492,30 +493,33 @@ const Nav = {
 const Dashboard = {
   async load() {
     const now = new Date();
-    const msInicio = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-    const msFin    = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-31`;
+    const hace30   = new Date(now - 30*24*60*60*1000);
+    const anoInicio = new Date(now.getFullYear(), 0, 1);
     try {
       const [gSnap, iSnap, ganSnap, camSnap, lotSnap, tarSnap] = await Promise.all([
-        App.db.collection('gastos').where('fecha','>=',msInicio).where('fecha','<=',msFin).get(),
-        App.db.collection('ingresos').where('fecha','>=',msInicio).where('fecha','<=',msFin).get(),
+        App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
+        App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get(),
         App.db.collection('ganado').where('estado','==','activo').get(),
-        App.db.collection('camadas').where('fecha','>=',`${now.getFullYear()}-01-01`).get(),
+        App.db.collection('camadas').orderBy('fecha','desc').limit(200).get(),
         App.db.collection('agricola').get(),
         App.db.collection('tareas').where('estado','!=','completada').limit(5).get()
       ]);
-      const totalG = gSnap.docs.reduce((a,d)=>a+(d.data().monto||0),0);
-      const totalI = iSnap.docs.reduce((a,d)=>a+(d.data().monto||0),0);
+      const gastos30   = gSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
+      const ingresos30 = iSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
+      const camadasAno = camSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=anoInicio; });
+      const totalG = gastos30.reduce((a,d)=>a+(d.data().monto||0),0);
+      const totalI = ingresos30.reduce((a,d)=>a+(d.data().monto||0),0);
       document.getElementById('ds-gastos').textContent  = Utils.fmt$(totalG);
       document.getElementById('ds-gastos').className    = 'sc-val neg money neg';
       document.getElementById('ds-ingresos').textContent= Utils.fmt$(totalI);
       document.getElementById('ds-balance').textContent = Utils.fmt$(totalI - totalG);
       document.getElementById('ds-balance').className   = `sc-val money ${totalI>=totalG?'pos':'neg'}`;
       document.getElementById('ds-ganado').textContent  = ganSnap.size;
-      document.getElementById('ds-camadas').textContent = camSnap.size;
+      document.getElementById('ds-camadas').textContent = camadasAno.length;
       document.getElementById('ds-lotes').textContent   = lotSnap.size;
 
       // Last gastos
-      const lastG = gSnap.docs.slice(0,4);
+      const lastG = gastos30.slice(0,4);
       const lgEl = document.getElementById('dash-last-gastos');
       lgEl.innerHTML = lastG.length ? lastG.map(d=>{
         const g=d.data();
@@ -524,7 +528,7 @@ const Dashboard = {
           <div class="txs c-gris">${Utils.fmtDate(g.fecha)} · ${Utils.catLabel(g.categoria)}</div></div>
           <span class="money neg tsm">${Utils.fmt$(g.monto)}</span>
         </div>`;
-      }).join('') : '<div class="empty" style="padding:20px;border:none"><p>Sin gastos este mes</p></div>';
+      }).join('') : '<div class="empty" style="padding:20px;border:none"><p>Sin gastos en últimos 30 días</p></div>';
 
       // Pending tareas
       const tarEl = document.getElementById('dash-tareas');
@@ -553,11 +557,11 @@ const Dashboard = {
       });
       const ingData = Array(6).fill(0), gasData = Array(6).fill(0), catMap = {};
       const [gSnap, iSnap] = await Promise.all([
-        App.db.collection('gastos').where('fecha','>=',months[0].key+'-01').get(),
-        App.db.collection('ingresos').where('fecha','>=',months[0].key+'-01').get()
+        App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
+        App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get()
       ]);
-      gSnap.docs.forEach(d=>{ const g=d.data(); const k=g.fecha?.slice(0,7); const i=months.findIndex(m=>m.key===k); if(i>=0)gasData[i]+=(g.monto||0); catMap[g.categoria]=(catMap[g.categoria]||0)+(g.monto||0); });
-      iSnap.docs.forEach(d=>{ const g=d.data(); const k=g.fecha?.slice(0,7); const i=months.findIndex(m=>m.key===k); if(i>=0)ingData[i]+=(g.monto||0); });
+      gSnap.docs.forEach(d=>{ const g=d.data(); const x=Utils.parseDate(g.fecha); if(!x)return; const k=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`; const i=months.findIndex(m=>m.key===k); if(i>=0)gasData[i]+=(g.monto||0); catMap[g.categoria]=(catMap[g.categoria]||0)+(g.monto||0); });
+      iSnap.docs.forEach(d=>{ const g=d.data(); const x=Utils.parseDate(g.fecha); if(!x)return; const k=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`; const i=months.findIndex(m=>m.key===k); if(i>=0)ingData[i]+=(g.monto||0); });
 
       Charts.bar(document.getElementById('chart-ig'), months.map(m=>m.label), [
         { label:'Ingresos', data:ingData, color:'#1B4332' },
@@ -596,7 +600,7 @@ const Gastos = {
       const q = Gastos._q.toLowerCase();
       if (q && !((g.descripcion||'').toLowerCase().includes(q)||(g.proveedor||'').toLowerCase().includes(q))) return false;
       if (Gastos._cat && g.categoria !== Gastos._cat) return false;
-      if (Gastos._month && !(g.fecha||'').startsWith(Gastos._month)) return false;
+      if (Gastos._month) { const x=Utils.parseDate(g.fecha); const ym=x?`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`:''; if(ym!==Gastos._month)return false; }
       return true;
     });
   },
@@ -626,7 +630,7 @@ const Gastos = {
 
   stats() {
     const now = Utils.thisMonth();
-    const mes = Gastos._data.filter(g => (g.fecha||'').startsWith(now));
+    const mes = Gastos._data.filter(g => { const x=Utils.parseDate(g.fecha); if(!x)return false; return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`===now; });
     const total = mes.reduce((a,g)=>a+(g.monto||0),0);
     document.getElementById('g-total-mes').textContent = Utils.fmt$(total);
     document.getElementById('g-count-mes').textContent = mes.length;
@@ -742,7 +746,7 @@ const Ingresos = {
       const q=Ingresos._q.toLowerCase();
       if(q&&!((g.descripcion||'').toLowerCase().includes(q)||(g.cliente||'').toLowerCase().includes(q)))return false;
       if(Ingresos._cat&&g.categoria!==Ingresos._cat)return false;
-      if(Ingresos._month&&!(g.fecha||'').startsWith(Ingresos._month))return false;
+      if(Ingresos._month){ const x=Utils.parseDate(g.fecha); const ym=x?`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`:''; if(ym!==Ingresos._month)return false; }
       return true;
     });
   },
@@ -766,7 +770,7 @@ const Ingresos = {
   },
 
   stats() {
-    const now=Utils.thisMonth(), mes=Ingresos._data.filter(g=>(g.fecha||'').startsWith(now));
+    const now=Utils.thisMonth(), mes=Ingresos._data.filter(g=>{ const x=Utils.parseDate(g.fecha); if(!x)return false; return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`===now; });
     const total=mes.reduce((a,g)=>a+(g.monto||0),0);
     document.getElementById('i-total-mes').textContent=Utils.fmt$(total);
     document.getElementById('i-count-mes').textContent=mes.length;
