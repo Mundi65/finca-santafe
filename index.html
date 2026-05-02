@@ -331,6 +331,7 @@ textarea.fc{resize:vertical;min-height:76px}
    TABLES
    =================================================== */
 .twrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--g200)}
+@media(max-width:600px){.adm-levels{flex-direction:column;gap:8px}.adm-levels span{width:100%;white-space:normal}}
 .dtbl{width:100%;border-collapse:collapse;background:#fff;font-size:.855rem}
 .dtbl th{background:var(--g50);padding:11px 14px;text-align:left;
   font-size:.72rem;font-weight:700;color:var(--g600);letter-spacing:.05em;
@@ -1458,7 +1459,7 @@ textarea.fc{resize:vertical;min-height:76px}
 
   <!-- Niveles de acceso -->
   <div class="card mb2" style="background:var(--verde-pale);border-color:var(--verde-claro)">
-    <div class="flex gap3 flex-wrap" style="font-size:.82rem">
+    <div class="flex gap3 flex-wrap adm-levels" style="font-size:.82rem">
       <span><strong class="ul0">● Nivel 0</strong> — Propietario: acceso total + admin usuarios</span>
       <span><strong class="ul1">● Nivel 1</strong> — Administrador: lectura/escritura/eliminación</span>
       <span><strong class="ul2">● Nivel 2</strong> — Empleado: lectura/escritura, sin eliminar</span>
