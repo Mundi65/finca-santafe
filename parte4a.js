@@ -616,7 +616,7 @@ const Gastos = {
         <td><span class="badge b-gris">${Utils.catLabel(g.categoria)}</span></td>
         <td>${Utils.sanitize(g.proveedor||'—')}</td>
         <td class="tw"><span class="money neg">${Utils.fmt$(g.monto)}</span></td>
-        <td>${g.facturaUrl||g.facturaB64?`<a href="${g.facturaUrl||g.facturaB64}" target="_blank" style="color:var(--azul);font-size:.78rem">Ver</a>`:'—'}</td>
+        <td class="ac">${g.facturaUrl||g.facturaB64?`<span class="bico" onclick="Gastos._openFactura('${g.id}')" title="Ver factura" style="font-size:1.25rem;color:var(--verde)">📄</span>`:`<span style="font-size:1.25rem;opacity:.3">📄</span>`}</td>
         <td class="ac">
           <button class="bico" onclick="Gastos.openForm('${g.id}')" title="Editar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -669,14 +669,14 @@ const Gastos = {
         </div>
         <div class="fg"><label class="flbl">Notas</label>
           <textarea id="gf-notas" class="fc" rows="2" placeholder="Observaciones adicionales…">${Utils.sanitize(g?.notas||'')}</textarea></div>
-        <div class="fg"><label class="flbl">Foto de factura</label>
-          <div class="photo-up" id="gf-photo-area">
-            <input type="file" id="gf-factura" accept="image/*,application/pdf" onchange="Gastos._previewFactura(this)">
-            <div class="pu-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-            <p>Toca para subir foto o PDF de la factura</p>
-            <small>JPG, PNG, PDF · máx 5MB</small>
+        <div class="fg"><label class="flbl">📄 Foto de factura</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="gf-factura-cam">📷 Tomar foto</label>
+            <input type="file" id="gf-factura-cam" accept="image/*" capture="environment" onchange="Gastos._previewFactura(this)" style="display:none">
+            <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="gf-factura-gal">🖼️ Subir imagen</label>
+            <input type="file" id="gf-factura-gal" accept="image/*,application/pdf" onchange="Gastos._previewFactura(this)" style="display:none">
           </div>
-          ${g?.facturaUrl||g?.facturaB64?`<div class="photo-prev"><img src="${g.facturaUrl||g.facturaB64}" alt="Factura"><button class="photo-prev-rm" onclick="Gastos._clearFactura()">✕</button></div>`:'<div id="gf-prev"></div>'}
+          ${g?.facturaUrl||g?.facturaB64?`<div class="photo-prev"><img src="${g.facturaUrl||g.facturaB64}" alt="Factura" style="max-height:200px;object-fit:contain"><button class="photo-prev-rm" onclick="Gastos._clearFactura()">✕</button></div>`:'<div id="gf-prev"></div>'}
         </div>`,
       onSave: () => Gastos.save(id)
     });
@@ -693,8 +693,16 @@ const Gastos = {
     }
   },
   _clearFactura() {
-    document.getElementById('gf-factura').value='';
+    ['gf-factura-cam','gf-factura-gal'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const p=document.getElementById('gf-prev'); if(p)p.innerHTML='';
+  },
+
+  _openFactura(id) {
+    const g=Gastos._data.find(x=>x.id===id);
+    const url=g?.facturaUrl||g?.facturaB64; if(!url)return;
+    if(url.startsWith('http')){window.open(url,'_blank');return;}
+    const win=window.open('','_blank');
+    if(win){win.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>`);win.document.close();}
   },
 
   async save(id) {
@@ -707,10 +715,10 @@ const Gastos = {
       proveedor: document.getElementById('gf-prov').value.trim(),
       notas: document.getElementById('gf-notas').value.trim(),
       uid: App.user.uid, modificadoEn: firebase.firestore.FieldValue.serverTimestamp() };
-    const file = document.getElementById('gf-factura')?.files[0];
+    const file = document.getElementById('gf-factura-cam')?.files[0]||document.getElementById('gf-factura-gal')?.files[0];
     if (file) {
       UI.loading(true);
-      try { data.facturaB64 = await Utils.compressImg(file, 1000, 800, 0.8); } catch(e){}
+      try { data.facturaB64 = await Utils.compressImg(file, 1200, 1600, 0.8); } catch(e){}
       UI.loading(false);
     }
     if (id) { await App.db.collection('gastos').doc(id).update(data); UI.showToast('Gasto actualizado','suc'); }

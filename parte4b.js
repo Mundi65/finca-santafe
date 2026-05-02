@@ -62,8 +62,8 @@ const Ganado = {
     tbody.innerHTML=list.map(a=>{
       const gdp=Ganado.calcGDP(a.pesoInicial,a.fechaPesoInicial,a.pesoActual,a.fechaPesoActual);
       return `<tr>
-        <td>${a.fotoUrl||a.fotoB64?`<img src="${a.fotoUrl||a.fotoB64}" style="width:40px;height:40px;border-radius:8px;object-fit:cover" loading="lazy">`:
-          '<span style="font-size:1.6rem">🐄</span>'}</td>
+        <td>${a.fotoUrl||a.fotoB64?`<img src="${a.fotoUrl||a.fotoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0" loading="lazy">`:
+          '<span style="font-size:1.8rem">🐄</span>'}</td>
         <td class="fb">${Utils.sanitize(a.nombre||'—')}</td>
         <td>${Utils.especieLabel(a.especie)}</td><td>${Utils.sanitize(a.raza||'—')}</td>
         <td>${a.sexo==='macho'?'♂':'♀'}</td>
@@ -136,12 +136,13 @@ const Ganado = {
       </div>
       <div class="fg"><label class="flbl">Notas</label><textarea id="af-notas" class="fc" rows="2">${Utils.sanitize(a?.notas||'')}</textarea></div>
       <div class="fg"><label class="flbl">Foto del animal</label>
-        <div class="photo-up">
-          <input type="file" id="af-foto" accept="image/*" onchange="Ganado._previewFoto(this)">
-          <div class="pu-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
-          <p>Toca para subir foto</p><small>JPG, PNG · máx 5MB</small>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="af-foto-cam">📷 Tomar foto</label>
+          <input type="file" id="af-foto-cam" accept="image/*" capture="environment" onchange="Ganado._previewFoto(this)" style="display:none">
+          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="af-foto-gal">🖼️ Subir imagen</label>
+          <input type="file" id="af-foto-gal" accept="image/*" onchange="Ganado._previewFoto(this)" style="display:none">
         </div>
-        <div id="af-prev">${a?.fotoUrl||a?.fotoB64?`<div class="photo-prev"><img src="${a.fotoUrl||a.fotoB64}" alt="foto"></div>`:''}</div>
+        <div id="af-prev">${a?.fotoUrl||a?.fotoB64?`<div class="photo-prev"><img src="${a.fotoUrl||a.fotoB64}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"></div>`:''}</div>
       </div>`,
       onSave:()=>Ganado.save(id)
     });
@@ -159,7 +160,7 @@ const Ganado = {
 
   _previewFoto(inp){
     if(!inp.files[0])return;
-    const r=new FileReader();r.onload=e=>{document.getElementById('af-prev').innerHTML=`<div class="photo-prev"><img src="${e.target.result}" style="max-height:160px;object-fit:contain"><button class="photo-prev-rm" type="button" onclick="document.getElementById('af-foto').value='';document.getElementById('af-prev').innerHTML=''">✕</button></div>`;};r.readAsDataURL(inp.files[0]);
+    const r=new FileReader();r.onload=e=>{document.getElementById('af-prev').innerHTML=`<div class="photo-prev"><img src="${e.target.result}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"><button class="photo-prev-rm" type="button" onclick="['af-foto-cam','af-foto-gal'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('af-prev').innerHTML=''">✕</button></div>`;};r.readAsDataURL(inp.files[0]);
   },
 
   async save(id){
@@ -176,8 +177,8 @@ const Ganado = {
       padre:document.getElementById('af-padre').value.trim(),madre:document.getElementById('af-madre').value.trim(),
       notas:document.getElementById('af-notas').value.trim(),uid:App.user.uid,
       modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
-    const file=document.getElementById('af-foto')?.files[0];
-    if(file){UI.loading(true);try{data.fotoB64=await Utils.compressImg(file,900,700,0.78);}catch(e){}UI.loading(false);}
+    const file=document.getElementById('af-foto-cam')?.files[0]||document.getElementById('af-foto-gal')?.files[0];
+    if(file){UI.loading(true);try{data.fotoB64=await Utils.compressImg(file,800,800,0.7);}catch(e){}UI.loading(false);}
     if(id){await App.db.collection('ganado').doc(id).update(data);UI.showToast('Animal actualizado','suc');}
     else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('ganado').add(data);UI.showToast('Animal registrado','suc');}
   },

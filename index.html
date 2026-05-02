@@ -2205,7 +2205,7 @@ const Gastos = {
         <td><span class="badge b-gris">${Utils.catLabel(g.categoria)}</span></td>
         <td>${Utils.sanitize(g.proveedor||'—')}</td>
         <td class="tw"><span class="money neg">${Utils.fmt$(g.monto)}</span></td>
-        <td>${g.facturaUrl||g.facturaB64?`<a href="${g.facturaUrl||g.facturaB64}" target="_blank" style="color:var(--azul);font-size:.78rem">Ver</a>`:'—'}</td>
+        <td class="ac">${g.facturaUrl||g.facturaB64?`<span class="bico" onclick="Gastos._openFactura('${g.id}')" title="Ver factura" style="font-size:1.25rem;color:var(--verde)">📄</span>`:`<span style="font-size:1.25rem;opacity:.3">📄</span>`}</td>
         <td class="ac">
           <button class="bico" onclick="Gastos.openForm('${g.id}')" title="Editar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2258,14 +2258,14 @@ const Gastos = {
         </div>
         <div class="fg"><label class="flbl">Notas</label>
           <textarea id="gf-notas" class="fc" rows="2" placeholder="Observaciones adicionales…">${Utils.sanitize(g?.notas||'')}</textarea></div>
-        <div class="fg"><label class="flbl">Foto de factura</label>
-          <div class="photo-up" id="gf-photo-area">
-            <input type="file" id="gf-factura" accept="image/*,application/pdf" onchange="Gastos._previewFactura(this)">
-            <div class="pu-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-            <p>Toca para subir foto o PDF de la factura</p>
-            <small>JPG, PNG, PDF · máx 5MB</small>
+        <div class="fg"><label class="flbl">📄 Foto de factura</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="gf-factura-cam">📷 Tomar foto</label>
+            <input type="file" id="gf-factura-cam" accept="image/*" capture="environment" onchange="Gastos._previewFactura(this)" style="display:none">
+            <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="gf-factura-gal">🖼️ Subir imagen</label>
+            <input type="file" id="gf-factura-gal" accept="image/*,application/pdf" onchange="Gastos._previewFactura(this)" style="display:none">
           </div>
-          ${g?.facturaUrl||g?.facturaB64?`<div class="photo-prev"><img src="${g.facturaUrl||g.facturaB64}" alt="Factura"><button class="photo-prev-rm" onclick="Gastos._clearFactura()">✕</button></div>`:'<div id="gf-prev"></div>'}
+          ${g?.facturaUrl||g?.facturaB64?`<div class="photo-prev"><img src="${g.facturaUrl||g.facturaB64}" alt="Factura" style="max-height:200px;object-fit:contain"><button class="photo-prev-rm" onclick="Gastos._clearFactura()">✕</button></div>`:'<div id="gf-prev"></div>'}
         </div>`,
       onSave: () => Gastos.save(id)
     });
@@ -2282,8 +2282,16 @@ const Gastos = {
     }
   },
   _clearFactura() {
-    document.getElementById('gf-factura').value='';
+    ['gf-factura-cam','gf-factura-gal'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     const p=document.getElementById('gf-prev'); if(p)p.innerHTML='';
+  },
+
+  _openFactura(id) {
+    const g=Gastos._data.find(x=>x.id===id);
+    const url=g?.facturaUrl||g?.facturaB64; if(!url)return;
+    if(url.startsWith('http')){window.open(url,'_blank');return;}
+    const win=window.open('','_blank');
+    if(win){win.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${url}" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>`);win.document.close();}
   },
 
   async save(id) {
@@ -2296,10 +2304,10 @@ const Gastos = {
       proveedor: document.getElementById('gf-prov').value.trim(),
       notas: document.getElementById('gf-notas').value.trim(),
       uid: App.user.uid, modificadoEn: firebase.firestore.FieldValue.serverTimestamp() };
-    const file = document.getElementById('gf-factura')?.files[0];
+    const file = document.getElementById('gf-factura-cam')?.files[0]||document.getElementById('gf-factura-gal')?.files[0];
     if (file) {
       UI.loading(true);
-      try { data.facturaB64 = await Utils.compressImg(file, 1000, 800, 0.8); } catch(e){}
+      try { data.facturaB64 = await Utils.compressImg(file, 1200, 1600, 0.8); } catch(e){}
       UI.loading(false);
     }
     if (id) { await App.db.collection('gastos').doc(id).update(data); UI.showToast('Gasto actualizado','suc'); }
@@ -2547,7 +2555,7 @@ const Ganado = {
     tbody.innerHTML=list.map(a=>{
       const gdp=Ganado.calcGDP(a.pesoInicial,a.fechaPesoInicial,a.pesoActual,a.fechaPesoActual);
       return `<tr>
-        <td>${a.fotoUrl||a.fotoB64?`<img src="${a.fotoUrl||a.fotoB64}" style="width:40px;height:40px;border-radius:8px;object-fit:cover" loading="lazy">`:
+        <td>${a.fotoUrl||a.fotoB64?`<img src="${a.fotoUrl||a.fotoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0" loading="lazy">`:
           '<span style="font-size:1.6rem">🐄</span>'}</td>
         <td class="fb">${Utils.sanitize(a.nombre||'—')}</td>
         <td>${Utils.especieLabel(a.especie)}</td><td>${Utils.sanitize(a.raza||'—')}</td>
@@ -2621,12 +2629,13 @@ const Ganado = {
       </div>
       <div class="fg"><label class="flbl">Notas</label><textarea id="af-notas" class="fc" rows="2">${Utils.sanitize(a?.notas||'')}</textarea></div>
       <div class="fg"><label class="flbl">Foto del animal</label>
-        <div class="photo-up">
-          <input type="file" id="af-foto" accept="image/*" onchange="Ganado._previewFoto(this)">
-          <div class="pu-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
-          <p>Toca para subir foto</p><small>JPG, PNG · máx 5MB</small>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="af-foto-cam">📷 Tomar foto</label>
+          <input type="file" id="af-foto-cam" accept="image/*" capture="environment" onchange="Ganado._previewFoto(this)" style="display:none">
+          <label class="btn btn-ghost btn-sm" style="flex:1;text-align:center;cursor:pointer" for="af-foto-gal">🖼️ Subir imagen</label>
+          <input type="file" id="af-foto-gal" accept="image/*" onchange="Ganado._previewFoto(this)" style="display:none">
         </div>
-        <div id="af-prev">${a?.fotoUrl||a?.fotoB64?`<div class="photo-prev"><img src="${a.fotoUrl||a.fotoB64}" alt="foto"></div>`:''}</div>
+        <div id="af-prev">${a?.fotoUrl||a?.fotoB64?`<div class="photo-prev"><img src="${a.fotoUrl||a.fotoB64}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"></div>`:''}</div>
       </div>`,
       onSave:()=>Ganado.save(id)
     });
@@ -2644,7 +2653,7 @@ const Ganado = {
 
   _previewFoto(inp){
     if(!inp.files[0])return;
-    const r=new FileReader();r.onload=e=>{document.getElementById('af-prev').innerHTML=`<div class="photo-prev"><img src="${e.target.result}" style="max-height:160px;object-fit:contain"><button class="photo-prev-rm" type="button" onclick="document.getElementById('af-foto').value='';document.getElementById('af-prev').innerHTML=''">✕</button></div>`;};r.readAsDataURL(inp.files[0]);
+    const r=new FileReader();r.onload=e=>{document.getElementById('af-prev').innerHTML=`<div class="photo-prev"><img src="${e.target.result}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"><button class="photo-prev-rm" type="button" onclick="['af-foto-cam','af-foto-gal'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('af-prev').innerHTML=''">✕</button></div>`;};r.readAsDataURL(inp.files[0]);
   },
 
   async save(id){
@@ -2661,8 +2670,8 @@ const Ganado = {
       padre:document.getElementById('af-padre').value.trim(),madre:document.getElementById('af-madre').value.trim(),
       notas:document.getElementById('af-notas').value.trim(),uid:App.user.uid,
       modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
-    const file=document.getElementById('af-foto')?.files[0];
-    if(file){UI.loading(true);try{data.fotoB64=await Utils.compressImg(file,900,700,0.78);}catch(e){}UI.loading(false);}
+    const file=document.getElementById('af-foto-cam')?.files[0]||document.getElementById('af-foto-gal')?.files[0];
+    if(file){UI.loading(true);try{data.fotoB64=await Utils.compressImg(file,800,800,0.7);}catch(e){}UI.loading(false);}
     if(id){await App.db.collection('ganado').doc(id).update(data);UI.showToast('Animal actualizado','suc');}
     else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('ganado').add(data);UI.showToast('Animal registrado','suc');}
   },
