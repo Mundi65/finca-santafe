@@ -346,6 +346,7 @@ const Auth = {
       Nav.renderNav();
       Nav.updateUser();
       Nav.goTo('dashboard');
+      Valentina.startBadge();
       // Update last access
       App.db.collection('usuarios').doc(user.uid).update({ ultimoAcceso: firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{});
     } else {
@@ -424,7 +425,7 @@ const Nav = {
       el.className = 'ni' + (App.module === item.id ? ' active' : '');
       el.dataset.mod = item.id;
       el.onclick = () => { Nav.goTo(item.id); Nav.closeSidebar(); };
-      el.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${item.icon}</svg>${item.label}`;
+      el.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${item.icon}</svg>${item.label}${item.id==='valentina'?'<span id="val-badge" class="nbadge" style="display:none;background:#dc3545;min-width:20px">0</span>':''}`;
       nav.appendChild(el);
     });
   },

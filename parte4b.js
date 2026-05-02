@@ -754,38 +754,133 @@ document.addEventListener('click', e => {
 const Valentina = {
   _history: [],
   _context: '',
+  _ownerName: '',
+  _chatUnsub: null,
+  _badgeUnsub: null,
 
   load() {
-    Valentina._history = [];
-    const chat = document.getElementById('val-chat');
-    chat.innerHTML = '';
-    Valentina._setStatus('loading', 'Cargando datos…');
     const inp = document.getElementById('val-input');
     const btn = document.getElementById('val-send');
-    inp.disabled = true; btn.disabled = true;
-
     inp.oninput = () => { inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,120)+'px'; };
     inp.onkeydown = e => { if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); Valentina.send(); } };
 
-    const nombre = (App.profile?.nombre||'').split(' ')[0] || 'amigo';
-    const nivel  = App.profile?.nivel ?? 3;
-    Valentina._appendAI(`¡Hola ${nombre}! 👋 Soy Valentina, la asistente inteligente de Finca SantaFe. Dame un momento para revisar todos los datos de la finca…`);
+    Valentina._markRead();
+    Valentina._startChat();
 
-    Valentina._buildContext().then(ctx => {
-      Valentina._context = ctx;
+    if (!Valentina._context) {
+      Valentina._setStatus('loading', 'Cargando datos…');
+      inp.disabled = true; btn.disabled = true;
+      Valentina._buildContext().then(ctx => {
+        Valentina._context = ctx;
+        Valentina._setStatus('ready', 'Lista');
+        inp.disabled = false; btn.disabled = false;
+        inp.focus();
+      }).catch(() => {
+        Valentina._setStatus('error', 'Error');
+        inp.disabled = false; btn.disabled = false;
+      });
+    } else {
       Valentina._setStatus('ready', 'Lista');
       inp.disabled = false; btn.disabled = false;
-      const owner = Valentina._ownerName || 'el propietario';
-      const readyMsg = nivel === 0
-        ? `¡Listo ${nombre}! 🌿 Ya revisé todo. Pregúntame sobre el ganado, gastos, ingresos, cosechas, contactos o lo que necesites. ¿En qué te ayudo?`
-        : `¡Listo! 🌿 Ya leí todos los datos de la finca. ${owner} me ha pedido que te ayude en todo lo que necesites en Finca SantaFe. ¿Cómo puedo ayudarte?`;
-      Valentina._appendAI(readyMsg);
       inp.focus();
-    }).catch(e => {
-      Valentina._setStatus('error', 'Error');
-      Valentina._appendAI('Ups 😅 No pude cargar todos los datos ('+e.message+'). Igual puedo ayudarte con preguntas generales.');
-      inp.disabled = false; btn.disabled = false;
-    });
+    }
+  },
+
+  _startChat() {
+    if (Valentina._chatUnsub) { Valentina._chatUnsub(); Valentina._chatUnsub = null; }
+    const chatEl = document.getElementById('val-chat');
+    chatEl.innerHTML = '';
+    const unsub = App.db.collection('chat').orderBy('timestamp','asc').limitToLast(100)
+      .onSnapshot(snap => {
+        chatEl.innerHTML = '';
+        if (snap.empty) { Valentina._showWelcome(chatEl); return; }
+        Valentina._history = [];
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          if (d.tipo === 'typing') { chatEl.appendChild(Valentina._makeTypingEl()); return; }
+          chatEl.appendChild(Valentina._makeMsgEl(doc.id, d));
+          if (d.tipo === 'user') Valentina._history.push({role:'user', content: d.texto||''});
+          else if (d.tipo === 'valentina') Valentina._history.push({role:'assistant', content: d.texto||''});
+        });
+        chatEl.scrollTop = chatEl.scrollHeight;
+      });
+    Valentina._chatUnsub = unsub;
+    App._subs.push(unsub);
+  },
+
+  _showWelcome(chatEl) {
+    const nombre = (App.profile?.nombre||'').split(' ')[0] || 'amigo';
+    const nivel = App.profile?.nivel ?? 3;
+    const owner = Valentina._ownerName || 'el propietario';
+    const txt = nivel === 0
+      ? `¡Hola ${nombre}! 👋 Soy Valentina, la asistente inteligente de Finca SantaFe. Pregúntame sobre el ganado, gastos, ingresos, cosechas o lo que necesites. ¿En qué te ayudo?`
+      : `¡Hola! 👋 Soy Valentina, la asistente de Finca SantaFe. ${owner} me ha pedido que les ayude en todo lo que necesiten. ¿Cómo puedo ayudarte?`;
+    const d = document.createElement('div');
+    d.className = 'val-msg val-msg-ai';
+    d.innerHTML = `<div class="val-mav">V</div><div class="val-bbl-wrap"><div class="val-bbl-meta">Valentina</div><div class="val-bbl">${txt}</div></div>`;
+    chatEl.appendChild(d);
+  },
+
+  _makeMsgEl(id, d) {
+    const isMe = d.uid === App.user?.uid;
+    const isValentina = d.tipo === 'valentina';
+    const ts = d.timestamp?.seconds ? new Date(d.timestamp.seconds*1000) : (d.timestamp?.toDate ? d.timestamp.toDate() : null);
+    const hora = ts ? ts.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}) : '';
+    const el = document.createElement('div');
+    const txt = Utils.sanitize(d.texto||'');
+    if (isMe) {
+      el.className = 'val-msg val-msg-me';
+      el.innerHTML = `<div class="val-bbl-wrap val-bbl-wrap-me"><div class="val-bbl-meta">Tú · ${hora}</div><div class="val-bbl val-bbl-me">${txt}</div></div>`;
+    } else if (isValentina) {
+      el.className = 'val-msg val-msg-ai';
+      el.innerHTML = `<div class="val-mav">V</div><div class="val-bbl-wrap"><div class="val-bbl-meta">Valentina · ${hora}</div><div class="val-bbl">${txt}</div></div>`;
+    } else {
+      const ini = d.autorInicial || (d.autorNombre||'?')[0].toUpperCase();
+      el.className = 'val-msg val-msg-other';
+      el.innerHTML = `<div class="val-mav" style="background:${Valentina._colorFor(d.uid||'')}">${ini}</div><div class="val-bbl-wrap"><div class="val-bbl-meta">${Utils.sanitize(d.autorNombre||'Usuario')} · ${hora}</div><div class="val-bbl val-bbl-other">${txt}</div></div>`;
+    }
+    return el;
+  },
+
+  _makeTypingEl() {
+    const d = document.createElement('div');
+    d.className = 'val-msg val-msg-ai val-typing';
+    d.innerHTML = '<div class="val-mav">V</div><div class="val-bbl-wrap"><div class="val-bbl-meta">Valentina está escribiendo…</div><div class="val-bbl"><span></span><span></span><span></span></div></div>';
+    return d;
+  },
+
+  _colorFor(uid) {
+    const cols = ['#2D6A4F','#1B4332','#40916C','#6A4C93','#1982C4','#FF595E','#C8922A','#457B9D'];
+    let h = 0; for (let i=0;i<uid.length;i++) h=(h*31+uid.charCodeAt(i))&0xffffffff;
+    return cols[Math.abs(h)%cols.length];
+  },
+
+  _markRead() {
+    localStorage.setItem('val_last_read_'+(App.user?.uid||''), Date.now().toString());
+    const badge = document.getElementById('val-badge');
+    if (badge) badge.style.display = 'none';
+  },
+
+  startBadge() {
+    if (Valentina._badgeUnsub) { Valentina._badgeUnsub(); Valentina._badgeUnsub = null; }
+    const unsub = App.db.collection('chat').orderBy('timestamp','asc').limitToLast(50)
+      .onSnapshot(snap => {
+        const lastRead = parseInt(localStorage.getItem('val_last_read_'+(App.user?.uid||''))||'0');
+        let count = 0;
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          if (d.tipo === 'typing' || (d.tipo === 'user' && d.uid === App.user?.uid)) return;
+          const ts = d.timestamp?.seconds ? d.timestamp.seconds*1000 : (d.timestamp?.toDate ? d.timestamp.toDate().getTime() : 0);
+          if (ts > lastRead) count++;
+        });
+        const badge = document.getElementById('val-badge');
+        if (badge) {
+          if (count > 0) { badge.textContent = count > 9 ? '9+' : String(count); badge.style.display = 'inline-flex'; }
+          else badge.style.display = 'none';
+        }
+      });
+    Valentina._badgeUnsub = unsub;
+    App._subs.push(unsub);
   },
 
   _setStatus(type, text) {
@@ -911,31 +1006,6 @@ ${prox.map(e=>`- ${toDateStr(e.fecha)}: ${e.titulo||e.nombre||'Sin título'}${e.
     return ctx.join('\n\n') || 'No hay datos registrados aún en la finca.';
   },
 
-  _appendAI(text) {
-    const chat = document.getElementById('val-chat');
-    const d = document.createElement('div');
-    d.className = 'val-msg val-msg-ai';
-    const bbl = document.createElement('div'); bbl.className = 'val-bbl'; bbl.textContent = text;
-    d.innerHTML = '<div class="val-mav">V</div>';
-    d.appendChild(bbl);
-    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
-  },
-
-  _appendUser(text) {
-    const chat = document.getElementById('val-chat');
-    const d = document.createElement('div'); d.className = 'val-msg val-msg-user';
-    const bbl = document.createElement('div'); bbl.className = 'val-bbl'; bbl.textContent = text;
-    d.appendChild(bbl); chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
-  },
-
-  _showTyping() {
-    const chat = document.getElementById('val-chat');
-    const d = document.createElement('div');
-    d.className = 'val-msg val-msg-ai val-typing'; d.id = 'val-typ';
-    d.innerHTML = '<div class="val-mav">V</div><div class="val-bbl"><span></span><span></span><span></span></div>';
-    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
-  },
-
   async send() {
     const inp = document.getElementById('val-input');
     const btn = document.getElementById('val-send');
@@ -945,29 +1015,49 @@ ${prox.map(e=>`- ${toDateStr(e.fecha)}: ${e.titulo||e.nombre||'Sin título'}${e.
     inp.value = ''; inp.style.height = 'auto';
     inp.disabled = true; btn.disabled = true;
 
-    Valentina._appendUser(text);
-    Valentina._history.push({ role:'user', content:text });
-    Valentina._showTyping();
+    const nombre = (App.profile?.nombre||'').split(' ')[0] || App.user?.email?.split('@')[0] || 'Usuario';
+    const uid = App.user?.uid || '';
+
+    await App.db.collection('chat').add({
+      texto: text, tipo: 'user', autor: uid, autorNombre: nombre,
+      autorInicial: nombre[0]?.toUpperCase()||'?', uid,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    Valentina._history.push({role:'user', content: text});
+
+    await App.db.collection('chat').doc('_typing').set({
+      tipo: 'typing', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
     try {
       const res = await fetch('/api/valentina', {
         method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ messages: Valentina._history.slice(-12), context: Valentina._context })
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({messages: Valentina._history.slice(-12), context: Valentina._context})
       });
-      document.getElementById('val-typ')?.remove();
+      await App.db.collection('chat').doc('_typing').delete().catch(()=>{});
 
       if (!res.ok) {
         const e = await res.json().catch(()=>({}));
         throw new Error(e.error || `HTTP ${res.status}`);
       }
-      const data  = await res.json();
+      const data = await res.json();
       const reply = data.content?.[0]?.text || '(Sin respuesta)';
-      Valentina._history.push({ role:'assistant', content:reply });
-      Valentina._appendAI(reply);
+      Valentina._history.push({role:'assistant', content: reply});
+
+      await App.db.collection('chat').add({
+        texto: reply, tipo: 'valentina', autor: 'valentina',
+        autorNombre: 'Valentina', autorInicial: 'V', uid: 'valentina',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
     } catch(e) {
-      document.getElementById('val-typ')?.remove();
-      Valentina._appendAI(`Oops, tuve un problemilla 😬 — ${e.message}. ¿Le intentamos de nuevo?`);
+      await App.db.collection('chat').doc('_typing').delete().catch(()=>{});
+      await App.db.collection('chat').add({
+        texto: `Oops, tuve un problemilla 😬 — ${e.message}. ¿Le intentamos de nuevo?`,
+        tipo: 'valentina', autor: 'valentina', autorNombre: 'Valentina',
+        autorInicial: 'V', uid: 'valentina',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
     } finally {
       inp.disabled = false; btn.disabled = false; inp.focus();
     }
