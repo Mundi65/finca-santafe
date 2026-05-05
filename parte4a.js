@@ -78,8 +78,8 @@ const Utils = {
     servicios:'Servicios',subsidios:'Subsidios',otros:'Otros'}[c]||c||'—'),
   especieLabel: e => ({bovino:'Bovino',porcino:'Porcino',ovino:'Ovino',caprino:'Caprino',
     equino:'Equino',aves:'Aves',otros:'Otros'}[e]||e||'—'),
-  estadoLabel: s => ({activo:'Activo',vendido:'Vendido',muerto:'Muerto',otro:'Otro'}[s]||s||'—'),
-  estadoBadge: s => ({activo:'b-ok',vendido:'b-azul',muerto:'b-rojo',otro:'b-gris'}[s]||'b-gris'),
+  estadoLabel: s => ({activo:'Activo',vendido:'Vendido',muerto:'Muerto',otro:'Otro',inactivo:'Inactivo'}[s]||s||'—'),
+  estadoBadge: s => ({activo:'b-ok',vendido:'b-azul',muerto:'b-rojo',otro:'b-gris',inactivo:'b-rojo'}[s]||'b-gris'),
   tareaLabel: t => ({riego:'Riego',fertilizacion:'Fertilización',fumigacion:'Fumigación',
     siembra:'Siembra',cosecha:'Cosecha',mantenimiento:'Mantenimiento',otro:'Otro'}[t]||t||'—'),
   eventoLabel: t => ({visita:'Visita',vacunacion:'Vacunación',pago:'Pago',cosecha:'Cosecha',reunion:'Reunión',otro:'Otro'}[t]||t||'—'),
@@ -407,6 +407,8 @@ const Nav = {
     { id:'ingresos',   label:'Ingresos',    icon:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
     { id:'camadas',    label:'Camadas',     icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
     { id:'ganado',     label:'Ganado',      icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+    { id:'aves',       label:'🐔 Aves',     icon:'<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>' },
+    { id:'cerdos',     label:'🐷 Cerdos',   icon:'<circle cx="12" cy="12" r="9"/><circle cx="9" cy="11" r="1" fill="currentColor"/><circle cx="15" cy="11" r="1" fill="currentColor"/><path d="M9 15.5a3.5 3.5 0 0 0 6 0"/>' },
     { id:'agricola',   label:'Agrícola',    icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
     { id:'calendario', label:'Calendario',  icon:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
     { id:'contactos',  label:'Contactos',   icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>' },
@@ -452,7 +454,7 @@ const Nav = {
     App.module = id;
     // Load module data
     const loaders = { dashboard:Dashboard.load, gastos:Gastos.load, ingresos:Ingresos.load,
-      camadas:Camadas.load, ganado:Ganado.load, agricola:Agricola.load,
+      camadas:Camadas.load, ganado:Ganado.load, aves:Aves.load, cerdos:Cerdos.load, agricola:Agricola.load,
       calendario:Calendario.load, contactos:Contactos.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
     if (loaders[id]) loaders[id]();
     window.scrollTo({ top: 0, behavior: 'smooth' });

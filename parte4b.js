@@ -2,7 +2,7 @@
 // GANADO
 // =====================================================
 const Ganado = {
-  _data:[], _q:'', _esp:'', _est:'', _view:'grid',
+  _data:[], _q:'', _esp:'', _est:'', _view:'grid', _showAll:false,
 
   load() {
     const unsub=App.db.collection('ganado').orderBy('nombre').limit(300)
@@ -21,7 +21,8 @@ const Ganado = {
     const q=Ganado._q.toLowerCase();
     if(q&&!((a.nombre||'').toLowerCase().includes(q)||(a.raza||'').toLowerCase().includes(q)||(a.ubicacion||'').toLowerCase().includes(q)))return false;
     if(Ganado._esp&&a.especie!==Ganado._esp)return false;
-    if(Ganado._est&&a.estado!==Ganado._est)return false;
+    if(Ganado._est){if(a.estado!==Ganado._est)return false;}
+    else if(!Ganado._showAll&&a.estado==='inactivo')return false;
     return true;
   });},
 
@@ -42,16 +43,18 @@ const Ganado = {
     const el=document.getElementById('ganado-grid');
     if(!list.length){el.innerHTML=`<div class="empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><h3>Sin animales</h3><p>Registra tu primer animal</p></div>`;return;}
     el.innerHTML=list.map(a=>{
+      const ini=a.estado==='inactivo';
       const gdp=Ganado.calcGDP(a.pesoInicial,a.fechaPesoInicial,a.pesoActual,a.fechaPesoActual);
-      return `<div class="acard" onclick="Ganado.openForm('${a.id}')">
+      return `<div class="acard" onclick="Ganado.openForm('${a.id}')"${ini?' style="opacity:.55"':''}>
         <div class="acard-img">${a.fotoUrl||a.fotoB64?`<img src="${a.fotoUrl||a.fotoB64}" alt="${Utils.sanitize(a.nombre)}" loading="lazy">`:
           `<div class="acard-nophoto">🐄</div>`}</div>
-        <div class="acard-body">
+        <div class="acard-body"${ini?' style="color:var(--g500)"':''}>
           <div class="acard-name">${Utils.sanitize(a.nombre||'Sin nombre')}</div>
           <div class="acard-info">${Utils.especieLabel(a.especie)}${a.raza?' · '+Utils.sanitize(a.raza):''}</div>
           <div class="acard-info">${a.sexo==='macho'?'♂ Macho':'♀ Hembra'}${a.pesoActual?' · '+a.pesoActual+' kg':''}</div>
-          ${gdp?`<div class="gdp-badge">📈 ${gdp} kg/día</div>`:''}
-          <span class="badge ${Utils.estadoBadge(a.estado)}" style="margin-top:6px">${Utils.estadoLabel(a.estado)}</span>
+          ${!ini&&gdp?`<div class="gdp-badge">📈 ${gdp} kg/día</div>`:''}
+          <span class="badge ${ini?'b-rojo':Utils.estadoBadge(a.estado)}" style="margin-top:6px">${ini?'🚪 '+Utils.sanitize(a.motivoSalida||'Inactivo'):Utils.estadoLabel(a.estado)}</span>
+          ${ini&&a.fechaSalida?`<div class="acard-info" style="font-size:.72rem;margin-top:2px">Salida: ${Utils.fmtDate(a.fechaSalida)}</div>`:''}
         </div>
       </div>`;}).join('');
   },
@@ -60,21 +63,22 @@ const Ganado = {
     const tbody=document.getElementById('ganado-tbody');
     if(!list.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty" style="border:none;padding:30px"><p>Sin animales</p></div></td></tr>`;return;}
     tbody.innerHTML=list.map(a=>{
+      const ini=a.estado==='inactivo';
       const gdp=Ganado.calcGDP(a.pesoInicial,a.fechaPesoInicial,a.pesoActual,a.fechaPesoActual);
-      return `<tr>
-        <td>${a.fotoUrl||a.fotoB64?`<img src="${a.fotoUrl||a.fotoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0" loading="lazy">`:
+      return `<tr${ini?' style="color:var(--g400)"':''}>
+        <td>${a.fotoUrl||a.fotoB64?`<img src="${a.fotoUrl||a.fotoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0${ini?';opacity:.55':''}" loading="lazy">`:
           '<span style="font-size:1.8rem">🐄</span>'}</td>
         <td class="fb">${Utils.sanitize(a.nombre||'—')}</td>
         <td>${Utils.especieLabel(a.especie)}</td><td>${Utils.sanitize(a.raza||'—')}</td>
         <td>${a.sexo==='macho'?'♂':'♀'}</td>
         <td>${a.pesoActual?a.pesoActual+' kg':'—'}</td>
-        <td>${gdp?`<span class="gdp-badge">${gdp} kg/día</span>`:'—'}</td>
-        <td><span class="badge ${Utils.estadoBadge(a.estado)}">${Utils.estadoLabel(a.estado)}</span></td>
+        <td>${!ini&&gdp?`<span class="gdp-badge">${gdp} kg/día</span>`:'—'}</td>
+        <td><span class="badge ${ini?'b-rojo':Utils.estadoBadge(a.estado)}">${ini?Utils.sanitize(a.motivoSalida||'Inactivo'):Utils.estadoLabel(a.estado)}</span></td>
         <td>${Utils.sanitize(a.ubicacion||'—')}</td>
         <td class="ac">
           <button class="bico" onclick="event.stopPropagation();Ganado.openForm('${a.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           ${App.canDelete()?`<button class="bico dan" onclick="event.stopPropagation();Ganado.del('${a.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
-          <button class="bico" onclick="event.stopPropagation();Ganado.openPesos('${a.id}')" title="Historial pesos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></button>
+          ${!ini?`<button class="bico" onclick="event.stopPropagation();Ganado.openPesos('${a.id}')" title="Historial pesos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></button>`:''}
         </td></tr>`;}).join('');
   },
 
@@ -91,6 +95,7 @@ const Ganado = {
   filter(q){Ganado._q=q;Ganado.render();},filterEspecie(e){Ganado._esp=e;Ganado.render();},
   filterEstado(s){Ganado._est=s;Ganado.render();},
   filterView(v){Ganado._view=v;Ganado.render();},
+  toggleHistorial(){Ganado._showAll=!Ganado._showAll;const b=document.getElementById('gan-hist-btn');if(b)b.textContent=Ganado._showAll?'👁 Ocultar historial':'🕐 Ver historial';Ganado.render();},
 
   openForm(id=null){
     if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
@@ -127,7 +132,7 @@ const Ganado = {
       <div class="divider"></div>
       <div class="fgrid fg2">
         <div class="fg"><label class="flbl">Estado</label>
-          <select id="af-est" class="fc">${['activo','vendido','muerto','otro'].map(s=>`<option value="${s}"${a?.estado===s?' selected':''}>${Utils.estadoLabel(s)}</option>`).join('')}</select></div>
+          <select id="af-est" class="fc">${(a?.estado==='inactivo'?['activo','vendido','muerto','otro','inactivo']:['activo','vendido','muerto','otro']).map(s=>`<option value="${s}"${a?.estado===s?' selected':''}>${Utils.estadoLabel(s)}</option>`).join('')}</select></div>
         <div class="fg"><label class="flbl">Ubicación / Potrero</label><input type="text" id="af-ubi" class="fc" value="${Utils.sanitize(a?.ubicacion||'')}" placeholder="Ej: Potrero Norte"></div>
       </div>
       <div class="fgrid fg2">
@@ -143,7 +148,8 @@ const Ganado = {
           <input type="file" id="af-foto-gal" accept="image/*" onchange="Ganado._previewFoto(this)" style="display:none">
         </div>
         <div id="af-prev">${a?.fotoUrl||a?.fotoB64?`<div class="photo-prev"><img src="${a.fotoUrl||a.fotoB64}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"></div>`:''}</div>
-      </div>`,
+      </div>
+      ${a&&a.estado==='activo'?`<div class="divider"></div><div style="text-align:right"><button type="button" onclick="UI.closeModal();Ganado.registrarSalida('${id}')" style="padding:8px 16px;border:1.5px solid #dc3545;background:#fff5f5;color:#dc3545;border-radius:8px;cursor:pointer;font-size:.87rem;font-weight:600">🚪 Registrar Salida</button></div>`:''}`,
       onSave:()=>Ganado.save(id)
     });
     if(gdp)document.getElementById('gdp-val').textContent=gdp+' kg/día';
@@ -156,6 +162,46 @@ const Ganado = {
     const disp=document.getElementById('gdp-display');
     if(gdp&&disp){disp.style.display='block';document.getElementById('gdp-val').textContent=gdp+' kg/día';}
     else if(disp)disp.style.display='none';
+  },
+
+  registrarSalida(id){
+    if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+    const a=Ganado._data.find(x=>x.id===id);if(!a)return;
+    UI.showModal({title:`Registrar Salida — ${Utils.sanitize(a.nombre)}`,body:`
+      <div class="fg"><label class="flbl">Motivo *</label>
+        <select id="sal-mot" class="fc" onchange="Ganado._togglePrecioSalida()">
+          <option value="Venta">Venta</option>
+          <option value="Muerte por enfermedad">Muerte por enfermedad</option>
+          <option value="Muerte natural">Muerte natural</option>
+          <option value="Consumo dueños">Consumo dueños</option>
+          <option value="Consumo personal">Consumo personal</option>
+          <option value="Donación">Donación</option>
+          <option value="Robo">Robo</option>
+          <option value="Otro">Otro</option>
+        </select></div>
+      <div class="fg mt2"><label class="flbl">Fecha de salida *</label><input type="date" id="sal-fecha" class="fc" value="${Utils.today()}"></div>
+      <div class="fg mt2" id="sal-precio-wrap"><label class="flbl">Precio de venta ($)</label><input type="number" id="sal-precio" class="fc" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="fg mt2"><label class="flbl">Observaciones</label><textarea id="sal-obs" class="fc" rows="2"></textarea></div>`,
+      onSave:()=>Ganado._saveSalida(id)
+    });
+  },
+
+  _togglePrecioSalida(){
+    const mot=document.getElementById('sal-mot')?.value;
+    const wrap=document.getElementById('sal-precio-wrap');
+    if(wrap)wrap.style.display=mot==='Venta'?'':'none';
+  },
+
+  async _saveSalida(id){
+    const motivo=document.getElementById('sal-mot').value;
+    const fecha=document.getElementById('sal-fecha').value;
+    if(!fecha){UI.showToast('Ingresa la fecha de salida','war');return false;}
+    const data={estado:'inactivo',fechaSalida:fecha,motivoSalida:motivo,
+      observacionesSalida:document.getElementById('sal-obs').value.trim(),
+      modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
+    if(motivo==='Venta')data.precioSalida=parseFloat(document.getElementById('sal-precio').value)||null;
+    await App.db.collection('ganado').doc(id).update(data);
+    UI.showToast('Salida registrada','suc');
   },
 
   _previewFoto(inp){
@@ -207,6 +253,332 @@ const Ganado = {
     });
   }
 };
+
+// =====================================================
+// GRANJA (factory Aves / Cerdos)
+// =====================================================
+function createGranjaModule(cfg){
+  const M={
+    _galpones:[],_ciclos:[],
+
+    load(){
+      const u1=App.db.collection(cfg.colGalpones).orderBy('nombre').onSnapshot(s=>{M._galpones=s.docs.map(d=>({id:d.id,...d.data()}));M.renderGalpones();},e=>console.error(e));
+      const u2=App.db.collection(cfg.colCiclos).orderBy('fechaIngreso','desc').onSnapshot(s=>{M._ciclos=s.docs.map(d=>({id:d.id,...d.data()}));M.renderGalpones();M.renderCiclos();},e=>console.error(e));
+      App._subs.push(u1,u2);
+    },
+
+    switchTab(tab,el){
+      document.querySelectorAll(`#mod-${cfg.modId} .tab`).forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll(`#mod-${cfg.modId} .tbc`).forEach(t=>t.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById(`${cfg.modId}-tbc-${tab}`).classList.add('active');
+      const bG=document.getElementById(`btn-nuevo-galpon-${cfg.modId}`);
+      const bC=document.getElementById(`btn-nuevo-ciclo-${cfg.modId}`);
+      if(bG)bG.style.display=tab==='galpones'?'':'none';
+      if(bC)bC.style.display=tab==='ciclos'?'':'none';
+    },
+
+    _calcTotalIngresados(c){return(c.cantidadInicial||0)+(c.movimientos||[]).filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+(m.cantidad||0),0);},
+    _calcBajas(c){return(c.movimientos||[]).filter(m=>m.tipo==='baja').reduce((a,m)=>a+(m.cantidad||0),0);},
+    _calcTraslados(c){return(c.movimientos||[]).filter(m=>m.tipo==='traslado').reduce((a,m)=>a+(m.cantidad||0),0);},
+    _calcQuedan(c){return M._calcTotalIngresados(c)-M._calcBajas(c)-M._calcTraslados(c);},
+
+    renderGalpones(){
+      const el=document.getElementById(`${cfg.modId}-galpones-list`);if(!el)return;
+      if(!M._galpones.length){el.innerHTML=`<div class="empty"><h3>Sin ${cfg.labelGalpones}</h3><p>Crea el primer ${cfg.labelGalpon}</p></div>`;return;}
+      const estLabel={activo:'Activo',en_limpieza:'En limpieza',vacio:'Vacío'};
+      const estBadge={activo:'b-ok',en_limpieza:'b-azul',vacio:'b-gris'};
+      el.innerHTML=M._galpones.map(g=>{
+        const ca=M._ciclos.find(c=>c.galponId===g.id&&c.estado==='activo');
+        const n=ca?M._calcQuedan(ca):0;
+        return `<div class="acard" onclick="${cfg.globalName}.openGalponForm('${g.id}')">
+          <div class="acard-body" style="padding:16px">
+            <div class="acard-name">${cfg.emoji} ${Utils.sanitize(g.nombre)}</div>
+            <span class="badge ${estBadge[g.estado]||'b-gris'}" style="margin:6px 0 8px;display:inline-block">${estLabel[g.estado]||g.estado}</span>
+            <div class="acard-info">${n} / ${g.capacidadMax||'?'} ${cfg.labelUnitPlural}</div>
+            ${ca?`<div class="acard-info" style="color:var(--verde);font-size:.78rem">Ciclo activo: ${Utils.sanitize(ca.especie||'')}</div>`:''}
+            ${g.observaciones?`<div class="acard-info txs c-gris mt1">${Utils.sanitize(g.observaciones)}</div>`:''}
+            ${App.canDelete()?`<div style="margin-top:8px"><button class="bico dan" onclick="event.stopPropagation();${cfg.globalName}.delGalpon('${g.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div>`:''}
+          </div>
+        </div>`;
+      }).join('');
+    },
+
+    renderCiclos(){
+      const el=document.getElementById(`${cfg.modId}-ciclos-list`);if(!el)return;
+      if(!M._ciclos.length){el.innerHTML=`<div class="empty"><h3>Sin ciclos</h3><p>Inicia un nuevo ciclo productivo</p></div>`;return;}
+      const estLabel={activo:'Activo',en_limpieza:'En limpieza',cerrado:'Cerrado'};
+      const estBadge={activo:'b-ok',en_limpieza:'b-azul',cerrado:'b-gris'};
+      el.innerHTML=M._ciclos.map(c=>{
+        const g=M._galpones.find(x=>x.id===c.galponId);
+        const total=M._calcTotalIngresados(c),bajas=M._calcBajas(c),tras=M._calcTraslados(c),quedan=M._calcQuedan(c);
+        const muertes=(c.movimientos||[]).filter(m=>m.tipo==='baja'&&['Enfermedad','Muerte natural'].includes(m.motivo)).reduce((a,m)=>a+(m.cantidad||0),0);
+        const iMort=total>0?((muertes/total)*100).toFixed(1):'0.0';
+        const dias=Utils.daysBetween(c.fechaIngreso,c.fechaCierre||Utils.today());
+        return `<div class="card mb2" style="cursor:pointer" onclick="${cfg.globalName}.openCicloFicha('${c.id}')">
+          <div class="flex jc-sb items-c mb2">
+            <div><div class="fb">${Utils.sanitize(c.especie||'—')}${c.raza?' ('+Utils.sanitize(c.raza)+')':''}</div>
+            ${g?`<div class="txs c-gris">${cfg.emoji} ${Utils.sanitize(g.nombre)}</div>`:''}</div>
+            <span class="badge ${estBadge[c.estado]||'b-gris'}">${estLabel[c.estado]||c.estado}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+            <div class="stat-card" style="padding:8px"><div class="sc-val" style="font-size:1.1rem">${quedan}</div><div class="sc-lbl">Quedan</div></div>
+            <div class="stat-card" style="padding:8px"><div class="sc-val" style="font-size:1.1rem">${iMort}%</div><div class="sc-lbl">Mortalidad</div></div>
+            <div class="stat-card" style="padding:8px"><div class="sc-val" style="font-size:1.1rem">${dias}d</div><div class="sc-lbl">Días ciclo</div></div>
+          </div>
+          <div class="txs c-gris">Ingresaron ${total} → bajas ${bajas} → traslados ${tras} → quedan ${quedan}</div>
+          ${cfg.hasPesoLote&&c.pesoLoteActual?`<div class="txs" style="color:var(--verde);margin-top:4px">⚖️ Peso lote: ${c.pesoLoteActual} kg/animal</div>`:''}
+        </div>`;
+      }).join('');
+    },
+
+    openGalponForm(id=null){
+      if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+      const g=id?M._galpones.find(x=>x.id===id):null;
+      UI.showModal({title:g?`Editar ${cfg.labelGalpon}`:`Nuevo ${cfg.labelGalpon}`,body:`
+        <div class="fg"><label class="flbl">Nombre *</label><input type="text" id="gf-nom" class="fc" value="${Utils.sanitize(g?.nombre||'')}" placeholder="Ej: ${cfg.labelGalpon} 1"></div>
+        <div class="fg mt2"><label class="flbl">Capacidad máxima (${cfg.labelUnitPlural})</label><input type="number" id="gf-cap" class="fc" value="${g?.capacidadMax||''}" min="0" placeholder="0"></div>
+        <div class="fg mt2"><label class="flbl">Estado</label>
+          <select id="gf-est" class="fc">
+            <option value="vacio"${(g?.estado||'vacio')==='vacio'?' selected':''}>Vacío</option>
+            <option value="activo"${g?.estado==='activo'?' selected':''}>Activo</option>
+            <option value="en_limpieza"${g?.estado==='en_limpieza'?' selected':''}>En limpieza</option>
+          </select></div>
+        <div class="fg mt2"><label class="flbl">Observaciones</label><textarea id="gf-obs" class="fc" rows="2">${Utils.sanitize(g?.observaciones||'')}</textarea></div>`,
+        onSave:()=>M.saveGalpon(id)
+      });
+    },
+
+    async saveGalpon(id){
+      const nom=document.getElementById('gf-nom').value.trim();
+      if(!nom){UI.showToast('El nombre es obligatorio','war');return false;}
+      const data={nombre:nom,capacidadMax:parseInt(document.getElementById('gf-cap').value)||0,
+        estado:document.getElementById('gf-est').value,observaciones:document.getElementById('gf-obs').value.trim(),
+        uid:App.user.uid,modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
+      if(id){await App.db.collection(cfg.colGalpones).doc(id).update(data);UI.showToast(`${cfg.labelGalpon} actualizado`,'suc');}
+      else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection(cfg.colGalpones).add(data);UI.showToast(`${cfg.labelGalpon} creado`,'suc');}
+    },
+
+    delGalpon(id){UI.confirm(`¿Eliminar este ${cfg.labelGalpon}?`,async()=>{await App.db.collection(cfg.colGalpones).doc(id).delete();UI.showToast(`${cfg.labelGalpon} eliminado`,'suc');});},
+
+    openCicloForm(id=null){
+      if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+      const c=id?M._ciclos.find(x=>x.id===id):null;
+      UI.showModal({title:c?'Editar Ciclo':'Nuevo Ciclo',size:'lg',body:`
+        <div class="fg"><label class="flbl">${cfg.labelGalpon} *</label>
+          <select id="cf-galpon" class="fc"><option value="">Seleccionar ${cfg.labelGalpon}...</option>
+            ${M._galpones.map(g=>`<option value="${g.id}"${c?.galponId===g.id?' selected':''}>${Utils.sanitize(g.nombre)}</option>`).join('')}
+          </select></div>
+        <div class="fgrid fg2 mt2">
+          <div class="fg"><label class="flbl">Especie *</label>
+            <select id="cf-esp" class="fc">${cfg.especies.map(e=>`<option value="${e}"${c?.especie===e?' selected':''}>${e}</option>`).join('')}</select></div>
+          <div class="fg"><label class="flbl">Raza</label><input type="text" id="cf-raza" class="fc" value="${Utils.sanitize(c?.raza||'')}" placeholder="Opcional"></div>
+        </div>
+        <div class="fgrid fg2 mt2">
+          <div class="fg"><label class="flbl">Procedencia</label><input type="text" id="cf-proc" class="fc" value="${Utils.sanitize(c?.procedencia||'')}" placeholder="Proveedor o finca"></div>
+          <div class="fg"><label class="flbl">Cantidad inicial *</label><input type="number" id="cf-cant" class="fc" value="${c?.cantidadInicial||''}" min="1" placeholder="0"></div>
+        </div>
+        <div class="fgrid fg2 mt2">
+          <div class="fg"><label class="flbl">Peso promedio ingreso (kg)</label><input type="number" id="cf-peso" class="fc" value="${c?.pesoPromedioIngreso||''}" step="0.1" min="0" placeholder="0.0"></div>
+          <div class="fg"><label class="flbl">Costo unitario ($)</label><input type="number" id="cf-costo" class="fc" value="${c?.costoUnitario||''}" step="0.01" min="0" placeholder="0.00"></div>
+        </div>
+        <div class="fg mt2"><label class="flbl">Fecha ingreso *</label><input type="date" id="cf-fecha" class="fc" value="${c?.fechaIngreso||Utils.today()}"></div>
+        ${cfg.hasPesoLote?`<div class="fg mt2"><label class="flbl">Peso promedio actual del lote (kg/animal)</label><input type="number" id="cf-peso-lote" class="fc" value="${c?.pesoLoteActual||''}" step="0.1" min="0" placeholder="0.0"></div>`:''}
+        <div class="fg mt2"><label class="flbl">Observaciones</label><textarea id="cf-obs" class="fc" rows="2">${Utils.sanitize(c?.observaciones||'')}</textarea></div>`,
+        onSave:()=>M.saveCiclo(id)
+      });
+    },
+
+    async saveCiclo(id){
+      const galponId=document.getElementById('cf-galpon').value;
+      const cant=parseInt(document.getElementById('cf-cant').value);
+      const fecha=document.getElementById('cf-fecha').value;
+      if(!galponId){UI.showToast(`Selecciona un ${cfg.labelGalpon}`,'war');return false;}
+      if(!cant||cant<1){UI.showToast('Ingresa la cantidad inicial','war');return false;}
+      if(!fecha){UI.showToast('Ingresa la fecha de ingreso','war');return false;}
+      const data={galponId,especie:document.getElementById('cf-esp').value,raza:document.getElementById('cf-raza').value.trim(),
+        procedencia:document.getElementById('cf-proc').value.trim(),cantidadInicial:cant,
+        pesoPromedioIngreso:parseFloat(document.getElementById('cf-peso').value)||null,
+        costoUnitario:parseFloat(document.getElementById('cf-costo').value)||null,
+        fechaIngreso:fecha,observaciones:document.getElementById('cf-obs').value.trim(),
+        uid:App.user.uid,modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
+      if(cfg.hasPesoLote)data.pesoLoteActual=parseFloat(document.getElementById('cf-peso-lote')?.value)||null;
+      if(!id){
+        data.movimientos=[];data.estado='activo';data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();
+        await App.db.collection(cfg.colCiclos).add(data);
+        await App.db.collection(cfg.colGalpones).doc(galponId).update({estado:'activo'});
+        UI.showToast('Ciclo creado','suc');
+      } else {
+        await App.db.collection(cfg.colCiclos).doc(id).update(data);UI.showToast('Ciclo actualizado','suc');
+      }
+    },
+
+    delCiclo(id){UI.confirm('¿Eliminar este ciclo?',async()=>{await App.db.collection(cfg.colCiclos).doc(id).delete();UI.showToast('Ciclo eliminado','suc');});},
+
+    openCicloFicha(id){
+      const c=M._ciclos.find(x=>x.id===id);if(!c)return;
+      const g=M._galpones.find(x=>x.id===c.galponId);
+      const total=M._calcTotalIngresados(c),bajas=M._calcBajas(c),tras=M._calcTraslados(c),quedan=M._calcQuedan(c);
+      const muertes=(c.movimientos||[]).filter(m=>m.tipo==='baja'&&['Enfermedad','Muerte natural'].includes(m.motivo)).reduce((a,m)=>a+(m.cantidad||0),0);
+      const iMort=total>0?((muertes/total)*100).toFixed(1):'0.0';
+      const dias=Utils.daysBetween(c.fechaIngreso,c.fechaCierre||Utils.today());
+      const movs=[...(c.movimientos||[])].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+      const estLabel={activo:'Activo',en_limpieza:'En limpieza',cerrado:'Cerrado'};
+      const estBadge={activo:'b-ok',en_limpieza:'b-azul',cerrado:'b-gris'};
+      const acciones=c.estado==='activo'?`
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+          <button class="btn btn-dor btn-sm" onclick="UI.closeModal();${cfg.globalName}._addAves('${id}')">+ Agregar ${cfg.labelUnitPlural}</button>
+          <button class="btn btn-sm" style="background:#fff3cd;color:#856404;border:1px solid #ffc107" onclick="UI.closeModal();${cfg.globalName}._registrarBaja('${id}')">📉 Registrar baja</button>
+          <button class="btn btn-sm" style="background:#cff4fc;color:#055160;border:1px solid #0dcaf0" onclick="UI.closeModal();${cfg.globalName}._trasladar('${id}')">🔄 Trasladar</button>
+          ${cfg.hasPesoLote?`<button class="btn btn-sm" style="background:#d1e7dd;color:#0f5132;border:1px solid #a3cfbb" onclick="UI.closeModal();${cfg.globalName}._actualizarPeso('${id}')">⚖️ Actualizar peso</button>`:''}
+          <button class="btn btn-sm" style="background:#d1e7dd;color:#0f5132;border:1px solid #a3cfbb" onclick="UI.closeModal();${cfg.globalName}._cerrarCiclo('${id}')">✅ Cerrar ciclo</button>
+        </div>` : (App.canDelete()?`<div style="margin-top:10px"><button class="btn btn-sm" style="background:#fff5f5;color:#dc3545;border:1px solid #f5c2c7" onclick="UI.closeModal();${cfg.globalName}.delCiclo('${id}')">🗑 Eliminar ciclo</button></div>`:'');
+      UI.showModal({title:`Ficha Ciclo — ${Utils.sanitize(c.especie||'—')}`,size:'lg',hideSave:true,body:`
+        <div class="flex jc-sb items-c mb2">
+          <div><div class="fb" style="font-size:1.05rem">${Utils.sanitize(c.especie||'—')}${c.raza?' · '+Utils.sanitize(c.raza):''}</div>
+          ${g?`<div class="txs c-gris">${cfg.emoji} ${Utils.sanitize(g.nombre)}</div>`:''}</div>
+          <span class="badge ${estBadge[c.estado]||'b-gris'}">${estLabel[c.estado]||c.estado}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+          <div class="stat-card" style="padding:10px"><div class="sc-val">${quedan}</div><div class="sc-lbl">Quedan</div></div>
+          <div class="stat-card" style="padding:10px"><div class="sc-val">${iMort}%</div><div class="sc-lbl">Mortalidad</div></div>
+          <div class="stat-card" style="padding:10px"><div class="sc-val">${dias}d</div><div class="sc-lbl">Días ciclo</div></div>
+        </div>
+        <div style="background:var(--g100);border-radius:var(--rsm);padding:10px 14px;margin-bottom:12px;font-size:.83rem">
+          Ingresaron <strong>${total}</strong> → bajas <strong>${bajas}</strong> → traslados <strong>${tras}</strong> → quedan <strong>${quedan}</strong>
+        </div>
+        <div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Procedencia</span><span>${Utils.sanitize(c.procedencia||'—')}</span></div>
+        <div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Peso ingreso</span><span>${c.pesoPromedioIngreso||'—'} kg</span></div>
+        <div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Costo unitario</span><span>${c.costoUnitario?Utils.fmt$(c.costoUnitario):'—'}</span></div>
+        <div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Fecha ingreso</span><span>${Utils.fmtDate(c.fechaIngreso)}</span></div>
+        ${c.fechaCierre?`<div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Fecha cierre</span><span>${Utils.fmtDate(c.fechaCierre)}</span></div>`:''}
+        ${c.cantidadFinalVendida?`<div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Vendidos al cierre</span><span>${c.cantidadFinalVendida}</span></div>`:''}
+        ${c.precioVentaTotal?`<div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Precio venta total</span><span class="money pos">${Utils.fmt$(c.precioVentaTotal)}</span></div>`:''}
+        ${cfg.hasPesoLote&&c.pesoLoteActual?`<div class="flex jc-sb items-c" style="padding:7px 0;border-bottom:1px solid var(--g100)"><span class="txs c-gris">Peso lote actual</span><span>${c.pesoLoteActual} kg/animal</span></div>`:''}
+        ${c.observaciones?`<div style="padding:7px 0;border-bottom:1px solid var(--g100)"><div class="txs c-gris mb1">Observaciones</div><div>${Utils.sanitize(c.observaciones)}</div></div>`:''}
+        ${acciones}
+        <div class="divider" style="margin:14px 0 10px"></div>
+        <div class="fb mb2">Historial de movimientos</div>
+        ${movs.length?movs.map(m=>{
+          const tLabel={ingreso:'➕ Ingreso',baja:'📉 Baja',traslado:'🔄 Traslado'}[m.tipo]||m.tipo;
+          const tColor={ingreso:'color:#0f5132',baja:'color:#842029',traslado:'color:#055160'}[m.tipo]||'';
+          return `<div style="padding:8px 0;border-bottom:1px solid var(--g100);font-size:.83rem">
+            <div class="flex jc-sb items-c"><span style="${tColor}">${tLabel}</span><span class="c-gris">${Utils.fmtDate(m.fecha)}</span></div>
+            <div>Cantidad: <strong>${m.cantidad}</strong>${m.procedencia?' · Proc: '+Utils.sanitize(m.procedencia):''}${m.motivo?' · '+Utils.sanitize(m.motivo):''}${m.galponDestino?' → '+Utils.sanitize(m.galponDestino):''}</div>
+            ${m.observaciones?`<div class="c-gris">${Utils.sanitize(m.observaciones)}</div>`:''}
+          </div>`;
+        }).join(''):'<div class="empty" style="padding:20px;border:none"><p>Sin movimientos registrados</p></div>'}
+      `});
+    },
+
+    _addAves(cid){
+      if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+      UI.showModal({title:`Agregar ${cfg.labelUnitPlural}`,body:`
+        <div class="fg"><label class="flbl">Cantidad *</label><input type="number" id="mv-cant" class="fc" min="1" placeholder="0"></div>
+        <div class="fg mt2"><label class="flbl">Fecha *</label><input type="date" id="mv-fecha" class="fc" value="${Utils.today()}"></div>
+        <div class="fg mt2"><label class="flbl">Procedencia</label><input type="text" id="mv-proc" class="fc" placeholder="Proveedor o finca"></div>
+        <div class="fg mt2"><label class="flbl">Costo unitario ($)</label><input type="number" id="mv-costo" class="fc" step="0.01" min="0" placeholder="0.00"></div>`,
+        onSave:async()=>{
+          const cant=parseInt(document.getElementById('mv-cant').value),fecha=document.getElementById('mv-fecha').value;
+          if(!cant||cant<1||!fecha){UI.showToast('Completa los campos requeridos','war');return false;}
+          const mov={tipo:'ingreso',cantidad:cant,fecha,procedencia:document.getElementById('mv-proc').value.trim(),
+            costoUnitario:parseFloat(document.getElementById('mv-costo').value)||null,creadoEn:new Date().toISOString()};
+          await App.db.collection(cfg.colCiclos).doc(cid).update({movimientos:firebase.firestore.FieldValue.arrayUnion(mov)});
+          UI.showToast(`${cfg.labelUnitPlural} agregados`,'suc');
+        }
+      });
+    },
+
+    _registrarBaja(cid){
+      if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+      UI.showModal({title:'Registrar Baja',body:`
+        <div class="fg"><label class="flbl">Cantidad *</label><input type="number" id="bj-cant" class="fc" min="1" placeholder="0"></div>
+        <div class="fg mt2"><label class="flbl">Motivo *</label>
+          <select id="bj-mot" class="fc">
+            <option>Enfermedad</option><option>Muerte natural</option><option>Consumo dueños</option>
+            <option>Consumo personal</option><option>Sacrificio venta</option><option>Otro</option>
+          </select></div>
+        <div class="fg mt2"><label class="flbl">Fecha *</label><input type="date" id="bj-fecha" class="fc" value="${Utils.today()}"></div>
+        <div class="fg mt2"><label class="flbl">Observaciones</label><textarea id="bj-obs" class="fc" rows="2"></textarea></div>`,
+        onSave:async()=>{
+          const cant=parseInt(document.getElementById('bj-cant').value),fecha=document.getElementById('bj-fecha').value;
+          if(!cant||cant<1||!fecha){UI.showToast('Completa los campos requeridos','war');return false;}
+          const mov={tipo:'baja',cantidad:cant,fecha,motivo:document.getElementById('bj-mot').value,
+            observaciones:document.getElementById('bj-obs').value.trim(),creadoEn:new Date().toISOString()};
+          await App.db.collection(cfg.colCiclos).doc(cid).update({movimientos:firebase.firestore.FieldValue.arrayUnion(mov)});
+          UI.showToast('Baja registrada','suc');
+        }
+      });
+    },
+
+    _trasladar(cid){
+      if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+      const c=M._ciclos.find(x=>x.id===cid);
+      const otros=M._galpones.filter(g=>g.id!==c?.galponId);
+      UI.showModal({title:'Trasladar',body:`
+        <div class="fg"><label class="flbl">Cantidad *</label><input type="number" id="tr-cant" class="fc" min="1" placeholder="0"></div>
+        <div class="fg mt2"><label class="flbl">${cfg.labelGalpon} destino *</label>
+          <select id="tr-dest" class="fc"><option value="">Seleccionar...</option>
+            ${otros.map(g=>`<option value="${Utils.sanitize(g.nombre)}">${Utils.sanitize(g.nombre)}</option>`).join('')}
+            <option value="Externo">Externo / Otro</option>
+          </select></div>
+        <div class="fg mt2"><label class="flbl">Fecha *</label><input type="date" id="tr-fecha" class="fc" value="${Utils.today()}"></div>`,
+        onSave:async()=>{
+          const cant=parseInt(document.getElementById('tr-cant').value),dest=document.getElementById('tr-dest').value,fecha=document.getElementById('tr-fecha').value;
+          if(!cant||cant<1||!dest||!fecha){UI.showToast('Completa los campos requeridos','war');return false;}
+          const mov={tipo:'traslado',cantidad:cant,fecha,galponDestino:dest,creadoEn:new Date().toISOString()};
+          await App.db.collection(cfg.colCiclos).doc(cid).update({movimientos:firebase.firestore.FieldValue.arrayUnion(mov)});
+          UI.showToast('Traslado registrado','suc');
+        }
+      });
+    },
+
+    _actualizarPeso(cid){
+      if(!App.canWrite()||!cfg.hasPesoLote)return;
+      UI.showModal({title:'Actualizar Peso del Lote',body:`
+        <div class="fg"><label class="flbl">Peso promedio actual (kg/animal) *</label><input type="number" id="pw-val" class="fc" step="0.1" min="0" placeholder="0.0"></div>`,
+        onSave:async()=>{
+          const peso=parseFloat(document.getElementById('pw-val').value);
+          if(!peso||peso<=0){UI.showToast('Ingresa el peso','war');return false;}
+          await App.db.collection(cfg.colCiclos).doc(cid).update({pesoLoteActual:peso});
+          UI.showToast('Peso actualizado','suc');
+        }
+      });
+    },
+
+    _cerrarCiclo(cid){
+      if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+      const c=M._ciclos.find(x=>x.id===cid);
+      UI.showModal({title:'Cerrar Ciclo',body:`
+        <p style="color:#856404;background:#fff3cd;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-bottom:12px">⚠️ El ${cfg.labelGalpon} pasará a "En limpieza" al cerrar el ciclo.</p>
+        <div class="fg"><label class="flbl">Fecha de cierre *</label><input type="date" id="cc-fecha" class="fc" value="${Utils.today()}"></div>
+        <div class="fg mt2"><label class="flbl">Cantidad final vendida</label><input type="number" id="cc-vend" class="fc" min="0" placeholder="0"></div>
+        <div class="fg mt2"><label class="flbl">Precio venta total ($)</label><input type="number" id="cc-precio" class="fc" step="0.01" min="0" placeholder="0.00"></div>
+        <div class="fg mt2"><label class="flbl">Observaciones</label><textarea id="cc-obs" class="fc" rows="2"></textarea></div>`,
+        onSave:async()=>{
+          const fecha=document.getElementById('cc-fecha').value;
+          if(!fecha){UI.showToast('Ingresa la fecha de cierre','war');return false;}
+          const upd={estado:'cerrado',fechaCierre:fecha,
+            cantidadFinalVendida:parseInt(document.getElementById('cc-vend').value)||0,
+            precioVentaTotal:parseFloat(document.getElementById('cc-precio').value)||null,
+            observacionesCierre:document.getElementById('cc-obs').value.trim()};
+          await App.db.collection(cfg.colCiclos).doc(cid).update(upd);
+          if(c?.galponId)await App.db.collection(cfg.colGalpones).doc(c.galponId).update({estado:'en_limpieza'});
+          UI.showToast('Ciclo cerrado','suc');
+        }
+      });
+    }
+  };
+  return M;
+}
+
+const Aves=createGranjaModule({modId:'aves',globalName:'Aves',colGalpones:'aves_galpones',colCiclos:'aves_ciclos',
+  labelGalpon:'Galpón',labelGalpones:'Galpones',emoji:'🐔',labelUnitPlural:'aves',
+  especies:['Pollo engorde','Gallina ponedora','Pato','Otra']});
+
+const Cerdos=createGranjaModule({modId:'cerdos',globalName:'Cerdos',colGalpones:'cerdos_galpones',colCiclos:'cerdos_ciclos',
+  labelGalpon:'Chanchera',labelGalpones:'Chancheras',emoji:'🐷',labelUnitPlural:'cerdos',hasPesoLote:true,
+  especies:['Cerdo engorde','Cerda reproductora','Lechones','Otro']});
 
 // =====================================================
 // AGRICOLA
