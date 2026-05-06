@@ -405,14 +405,13 @@ const Nav = {
     { id:'dashboard',  label:'Dashboard',   icon:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' },
     { id:'gastos',     label:'Gastos',      icon:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>' },
     { id:'ingresos',   label:'Ingresos',    icon:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
-    { id:'camadas',    label:'Camadas',     icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
     { id:'ganado',     label:'Ganado',      icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-    { id:'aves',       label:'🐔 Aves',     icon:'<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>' },
-    { id:'cerdos',     label:'🐷 Cerdos',   icon:'<circle cx="12" cy="12" r="9"/><circle cx="9" cy="11" r="1" fill="currentColor"/><circle cx="15" cy="11" r="1" fill="currentColor"/><path d="M9 15.5a3.5 3.5 0 0 0 6 0"/>' },
+    { id:'aves',       label:'Aves',        icon:'<path d="M3 10C7 5 13 4 17 7l-2 4-4-2v9H8v-9L3 10z"/><circle cx="18" cy="6" r="2"/>' },
+    { id:'cerdos',     label:'Cerdos',      icon:'<circle cx="12" cy="12" r="9"/><circle cx="9" cy="11" r="1" fill="currentColor"/><circle cx="15" cy="11" r="1" fill="currentColor"/><path d="M9 15.5a3.5 3.5 0 0 0 6 0"/>' },
     { id:'agricola',   label:'Agrícola',    icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
     { id:'calendario', label:'Calendario',  icon:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
     { id:'contactos',  label:'Contactos',   icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>' },
-    { id:'inventario', label:'🔧 Inventario',icon:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
+    { id:'inventario', label:'Inventario',   icon:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
     { id:'reportes',   label:'Reportes',    icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>' },
     { id:'admin',      label:'Admin',       icon:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',  adminOnly: true },
     { id:'valentina',  label:'Valentina IA', icon:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>' }
@@ -455,7 +454,7 @@ const Nav = {
     App.module = id;
     // Load module data
     const loaders = { dashboard:Dashboard.load, gastos:Gastos.load, ingresos:Ingresos.load,
-      camadas:Camadas.load, ganado:Ganado.load, aves:Aves.load, cerdos:Cerdos.load, agricola:Agricola.load,
+      ganado:Ganado.load, aves:Aves.load, cerdos:Cerdos.load, agricola:Agricola.load,
       calendario:Calendario.load, contactos:Contactos.load, inventario:Inventario.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
     if (loaders[id]) loaders[id]();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -500,17 +499,15 @@ const Dashboard = {
     const hace30   = new Date(now - 30*24*60*60*1000);
     const anoInicio = new Date(now.getFullYear(), 0, 1);
     try {
-      const [gSnap, iSnap, ganSnap, camSnap, lotSnap, tarSnap] = await Promise.all([
+      const [gSnap, iSnap, ganSnap, lotSnap, tarSnap] = await Promise.all([
         App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
         App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get(),
         App.db.collection('ganado').where('estado','==','activo').get(),
-        App.db.collection('camadas').orderBy('fecha','desc').limit(200).get(),
         App.db.collection('agricola').get(),
         App.db.collection('tareas').where('estado','!=','completada').limit(5).get()
       ]);
       const gastos30   = gSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
       const ingresos30 = iSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
-      const camadasAno = camSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=anoInicio; });
       const totalG = gastos30.reduce((a,d)=>a+(d.data().monto||0),0);
       const totalI = ingresos30.reduce((a,d)=>a+(d.data().monto||0),0);
       document.getElementById('ds-gastos').textContent  = Utils.fmt$(totalG);
@@ -519,7 +516,6 @@ const Dashboard = {
       document.getElementById('ds-balance').textContent = Utils.fmt$(totalI - totalG);
       document.getElementById('ds-balance').className   = `sc-val money ${totalI>=totalG?'pos':'neg'}`;
       document.getElementById('ds-ganado').textContent  = ganSnap.size;
-      document.getElementById('ds-camadas').textContent = camadasAno.length;
       document.getElementById('ds-lotes').textContent   = lotSnap.size;
 
       // Last gastos
@@ -832,77 +828,3 @@ const Ingresos = {
   del(id){UI.confirm('¿Eliminar este ingreso?',async()=>{await App.db.collection('ingresos').doc(id).delete();UI.showToast('Ingreso eliminado','suc');});}
 };
 
-// =====================================================
-// CAMADAS
-// =====================================================
-const Camadas = {
-  _data:[], _q:'', _esp:'',
-
-  load() {
-    const unsub=App.db.collection('camadas').orderBy('fecha','desc').limit(200)
-      .onSnapshot(snap=>{Camadas._data=snap.docs.map(d=>({id:d.id,...d.data()}));Camadas.render();Camadas.stats();},e=>console.error(e));
-    App._subs.push(unsub);
-  },
-
-  filtered(){return Camadas._data.filter(c=>{const q=Camadas._q.toLowerCase();if(q&&!((c.madre||'').toLowerCase().includes(q)||(c.padre||'').toLowerCase().includes(q)))return false;if(Camadas._esp&&c.especie!==Camadas._esp)return false;return true;});},
-
-  render() {
-    const tbody=document.getElementById('camadas-tbody'),list=Camadas.filtered();
-    if(!list.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty" style="border:none;padding:30px"><p>Sin camadas registradas</p></div></td></tr>`;return;}
-    tbody.innerHTML=list.map(c=>`
-      <tr>
-        <td>${Utils.fmtDate(c.fecha)}</td>
-        <td><span class="badge b-verde">${Utils.especieLabel(c.especie)}</span></td>
-        <td>${Utils.sanitize(c.madre||'—')}</td><td>${Utils.sanitize(c.padre||'—')}</td>
-        <td class="tw fb">${c.cantidadNacidos||0}</td>
-        <td class="tw"><span class="c-ok fb">${c.cantidadVivos||0}</span></td>
-        <td class="tw"><span class="c-rojo">${c.cantidadMuertos||0}</span></td>
-        <td>${c.pesoPromedio?c.pesoPromedio+' kg':'—'}</td>
-        <td class="ac">
-          <button class="bico" onclick="Camadas.openForm('${c.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          ${App.canDelete()?`<button class="bico dan" onclick="Camadas.del('${c.id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
-        </td>
-      </tr>`).join('');
-  },
-
-  stats(){const total=Camadas._data.length,nacidos=Camadas._data.reduce((a,c)=>a+(c.cantidadNacidos||0),0),vivos=Camadas._data.reduce((a,c)=>a+(c.cantidadVivos||0),0),muertos=Camadas._data.reduce((a,c)=>a+(c.cantidadMuertos||0),0);document.getElementById('c-total').textContent=total;document.getElementById('c-nacidos').textContent=nacidos;document.getElementById('c-vivos').textContent=vivos;document.getElementById('c-muertos').textContent=muertos;},
-  filter(q){Camadas._q=q;Camadas.render();},filterEspecie(e){Camadas._esp=e;Camadas.render();},
-
-  openForm(id=null){
-    if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
-    const c=id?Camadas._data.find(x=>x.id===id):null;
-    UI.showModal({title:c?'Editar Camada':'Nueva Camada',size:'lg',body:`
-      <div class="fgrid fg2">
-        <div class="fg"><label class="flbl">Fecha *</label><input type="date" id="cf-fecha" class="fc" value="${c?.fecha||Utils.today()}" required></div>
-        <div class="fg"><label class="flbl">Especie</label>
-          <select id="cf-esp" class="fc">${['bovino','porcino','ovino','caprino','equino','aves','otros'].map(e=>`<option value="${e}"${c?.especie===e?' selected':''}>${Utils.especieLabel(e)}</option>`).join('')}</select></div>
-      </div>
-      <div class="fgrid fg2">
-        <div class="fg"><label class="flbl">Madre (hembra)</label><input type="text" id="cf-madre" class="fc" value="${Utils.sanitize(c?.madre||'')}" placeholder="Nombre o arete"></div>
-        <div class="fg"><label class="flbl">Padre (macho)</label><input type="text" id="cf-padre" class="fc" value="${Utils.sanitize(c?.padre||'')}" placeholder="Nombre o arete"></div>
-      </div>
-      <div class="fgrid fg3">
-        <div class="fg"><label class="flbl">Nacidos *</label><input type="number" id="cf-nac" class="fc" value="${c?.cantidadNacidos||''}" min="0" required></div>
-        <div class="fg"><label class="flbl">Vivos</label><input type="number" id="cf-viv" class="fc" value="${c?.cantidadVivos||''}" min="0"></div>
-        <div class="fg"><label class="flbl">Muertos</label><input type="number" id="cf-mue" class="fc" value="${c?.cantidadMuertos||''}" min="0"></div>
-      </div>
-      <div class="fg"><label class="flbl">Peso promedio al nacer (kg)</label><input type="number" id="cf-peso" class="fc" value="${c?.pesoPromedio||''}" step="0.1" min="0" placeholder="ej: 35.5"></div>
-      <div class="fg"><label class="flbl">Notas</label><textarea id="cf-notas" class="fc" rows="2">${Utils.sanitize(c?.notas||'')}</textarea></div>`,
-      onSave:()=>Camadas.save(id)});
-  },
-
-  async save(id){
-    const fecha=document.getElementById('cf-fecha').value,nac=parseInt(document.getElementById('cf-nac').value);
-    if(!fecha||isNaN(nac)){UI.showToast('Completa campos obligatorios','war');return false;}
-    const data={fecha,especie:document.getElementById('cf-esp').value,madre:document.getElementById('cf-madre').value.trim(),
-      padre:document.getElementById('cf-padre').value.trim(),cantidadNacidos:nac,
-      cantidadVivos:parseInt(document.getElementById('cf-viv').value)||0,
-      cantidadMuertos:parseInt(document.getElementById('cf-mue').value)||0,
-      pesoPromedio:parseFloat(document.getElementById('cf-peso').value)||null,
-      notas:document.getElementById('cf-notas').value.trim(),uid:App.user.uid,
-      modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
-    if(id){await App.db.collection('camadas').doc(id).update(data);UI.showToast('Camada actualizada','suc');}
-    else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('camadas').add(data);UI.showToast('Camada registrada','suc');}
-  },
-  del(id){UI.confirm('¿Eliminar esta camada?',async()=>{await App.db.collection('camadas').doc(id).delete();UI.showToast('Camada eliminada','suc');});}
-};

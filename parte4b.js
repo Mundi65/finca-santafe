@@ -1469,11 +1469,10 @@ const Valentina = {
     const lastM = ym(prev);
     const ctx   = [];
 
-    const [ganadoS, gastosS, ingresosS, camadasS, agricolaS, contactosS, tareasS, eventosS, usuariosS] = await Promise.all([
+    const [ganadoS, gastosS, ingresosS, agricolaS, contactosS, tareasS, eventosS, usuariosS] = await Promise.all([
       db.collection('ganado').get(),
       db.collection('gastos').orderBy('fecha','desc').get(),
       db.collection('ingresos').orderBy('fecha','desc').get(),
-      db.collection('camadas').orderBy('fecha','desc').get(),
       db.collection('agricola').get(),
       db.collection('contactos').get(),
       db.collection('tareas').get(),
@@ -1528,14 +1527,7 @@ Balance neto este mes: $${(iEste-gEste).toFixed(2)} | Balance histórico: $${(iT
 Por concepto: ${iTop}`);
     }
 
-    // Camadas
-    const cam = camadasS.docs.map(d=>d.data());
-    if (cam.length) {
-      const act = cam.filter(c=>!['vendida','muerta'].includes(c.estado));
-      const totCrias = cam.reduce((s,c)=>s+(c.cantidad||0),0);
-      ctx.push(`CAMADAS — ${act.length} activas | ${cam.length} total | ${totCrias} crías registradas
-${cam.slice(0,8).map(c=>`- ${toDateStr(c.fecha)} ${c.especie||''}: ${c.cantidad||0} crías, estado: ${c.estado||'activa'}${c.madre?' madre: '+c.madre:''}`).join('\n')}`);
-    }
+
 
     // Lotes agrícolas
     const agr   = agricolaS.docs.map(d=>({...d.data()}));
