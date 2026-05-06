@@ -769,20 +769,34 @@ const Calendario = {
     for(let i=0;i<first;i++){const prev=new Date(y,m,-(first-1-i)).getDate();html+=`<div class="cday other"><div class="cdnum">${prev}</div></div>`;}
     for(let d=1;d<=days;d++){
       const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const dayEvts=Calendario._eventos.filter(e=>e.fecha===dateStr);
+      const dayEvts=Calendario._eventos.filter(e=>{
+        if(e.tipoFecha==='rango')return dateStr>=(e.fechaInicio||e.fecha)&&dateStr<=(e.fechaFin||e.fechaInicio||e.fecha);
+        return(e.fecha||e.fechaInicio)===dateStr;
+      });
       const isToday=dateStr===today;
       html+=`<div class="cday${isToday?' today':''}" onclick="Calendario.openEventoForm('${dateStr}')">
         <div class="cdnum">${isToday?`<div style="display:flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:50%;background:var(--verde);color:white;font-size:.78rem;font-weight:600">${d}</div>`:d}</div>
-        <div class="cevts">${dayEvts.slice(0,3).map(e=>`<div class="cevt ${e.tipo||'otro'}" onclick="event.stopPropagation();Calendario.openEventoForm('${dateStr}','${e.id}')" title="${Utils.sanitize(e.titulo)}">${Utils.sanitize(e.titulo)}</div>`).join('')}${dayEvts.length>3?`<div class="txs c-gris">+${dayEvts.length-3} más</div>`:''}</div>
+        <div class="cevts">${dayEvts.slice(0,3).map(e=>`<div class="cevt ${e.tipo||'otro'}" onclick="event.stopPropagation();Calendario.openEventoForm('${e.fecha||e.fechaInicio}','${e.id}')" title="${Utils.sanitize(e.titulo)}">${Utils.sanitize(e.titulo)}${e.tipoFecha==='recurrente'?' 🔄':e.tipoFecha==='rango'?' ↔':''}</div>`).join('')}${dayEvts.length>3?`<div class="txs c-gris">+${dayEvts.length-3} más</div>`:''}</div>
       </div>`;
     }
     const rem=42-first-days;for(let d=1;d<=rem;d++)html+=`<div class="cday other"><div class="cdnum">${d}</div></div>`;
     document.getElementById('cal-body').innerHTML=html;
   },
 
+  _fmtEvFecha(e){
+    if(e.tipoFecha==='rango')return`${Utils.fmtDate(e.fechaInicio)} al ${Utils.fmtDate(e.fechaFin)}`;
+    if(e.tipoFecha==='recurrente')return`${Utils.fmtDate(e.fechaInicio)} <span class="badge b-azul" style="font-size:.7rem;vertical-align:middle">${e.recurrencia}</span>`;
+    return`${Utils.fmtDate(e.fecha||e.fechaInicio)}${e.hora?' '+e.hora:''}`;
+  },
+
+  _evEditKey(e){return e.fecha||e.fechaInicio||Utils.today();},
+
   renderUpcoming(){
     const today=Utils.today();
-    const up=Calendario._eventos.filter(e=>e.fecha>=today).sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(0,8);
+    const up=Calendario._eventos.filter(e=>{
+      if(e.tipoFecha==='recurrente')return(e.fechaInicio||e.fecha)<=today;
+      return(e.fechaInicio||e.fecha||'')>=today;
+    }).sort((a,b)=>(a.fechaInicio||a.fecha||'').localeCompare(b.fechaInicio||b.fecha||'')).slice(0,10);
     const el=document.getElementById('upcoming-list');
     document.getElementById('upcoming-count').textContent=up.length+' evento'+(up.length!==1?'s':'');
     if(!up.length){el.innerHTML=`<div class="empty" style="padding:24px;border:none"><p>No hay eventos próximos</p></div>`;return;}
@@ -790,10 +804,10 @@ const Calendario = {
       <div class="flex gap2 items-c">
         <span class="cevt ${e.tipo||'otro'}" style="min-width:10px">&nbsp;</span>
         <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
-        <div class="txs c-gris">${Utils.fmtDate(e.fecha)}${e.hora?' '+e.hora:''} · ${Utils.eventoLabel(e.tipo)}</div></div>
+        <div class="txs c-gris">${Calendario._fmtEvFecha(e)} · ${Utils.eventoLabel(e.tipo)}</div></div>
       </div>
       <div class="flex gap1">
-        <button class="bico" onclick="Calendario.openEventoForm('${e.fecha}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="bico" onclick="Calendario.openEventoForm('${Calendario._evEditKey(e)}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         ${App.canDelete()?`<button class="bico dan" onclick="Calendario.del('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
       </div>
     </div>`).join('');
@@ -802,14 +816,43 @@ const Calendario = {
   prevMonth(){if(Calendario._month===0){Calendario._month=11;Calendario._year--;}else Calendario._month--;Calendario.render();},
   nextMonth(){if(Calendario._month===11){Calendario._month=0;Calendario._year++;}else Calendario._month++;Calendario.render();},
 
+  _switchTipoFecha(){
+    const tf=document.getElementById('ef-tipo-fecha')?.value;
+    document.getElementById('ef-campo-unica').style.display=tf==='unica'?'':'none';
+    document.getElementById('ef-campo-rango').style.display=tf==='rango'?'':'none';
+    document.getElementById('ef-campo-recurrente').style.display=tf==='recurrente'?'':'none';
+  },
+
   openEventoForm(fecha=null,id=null){
     if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
     const e=id?Calendario._eventos.find(x=>x.id===id):null;
+    const tf=e?.tipoFecha||'unica';
     UI.showModal({title:e?'Editar Evento':'Nuevo Evento',body:`
       <div class="fg"><label class="flbl">Título *</label><input type="text" id="ef-tit" class="fc" value="${Utils.sanitize(e?.titulo||'')}" required maxlength="120"></div>
-      <div class="fgrid fg2">
-        <div class="fg"><label class="flbl">Fecha *</label><input type="date" id="ef-fecha" class="fc" value="${e?.fecha||fecha||Utils.today()}" required></div>
-        <div class="fg"><label class="flbl">Hora</label><input type="time" id="ef-hora" class="fc" value="${e?.hora||''}"></div>
+      <div class="fg"><label class="flbl">Tipo de fecha</label>
+        <select id="ef-tipo-fecha" class="fc" onchange="Calendario._switchTipoFecha()">
+          <option value="unica"${tf==='unica'?' selected':''}>Fecha única</option>
+          <option value="rango"${tf==='rango'?' selected':''}>Rango de fechas</option>
+          <option value="recurrente"${tf==='recurrente'?' selected':''}>Recurrente</option>
+        </select></div>
+      <div id="ef-campo-unica"${tf!=='unica'?' style="display:none"':''}>
+        <div class="fgrid fg2 mt1">
+          <div class="fg"><label class="flbl">Fecha *</label><input type="date" id="ef-fecha" class="fc" value="${e?.fecha||e?.fechaInicio||fecha||Utils.today()}"></div>
+          <div class="fg"><label class="flbl">Hora</label><input type="time" id="ef-hora" class="fc" value="${e?.hora||''}"></div>
+        </div>
+      </div>
+      <div id="ef-campo-rango"${tf!=='rango'?' style="display:none"':''}>
+        <div class="fgrid fg2 mt1">
+          <div class="fg"><label class="flbl">Fecha inicio *</label><input type="date" id="ef-fecha-ini" class="fc" value="${e?.fechaInicio||fecha||Utils.today()}"></div>
+          <div class="fg"><label class="flbl">Fecha fin *</label><input type="date" id="ef-fecha-fin" class="fc" value="${e?.fechaFin||''}"></div>
+        </div>
+      </div>
+      <div id="ef-campo-recurrente"${tf!=='recurrente'?' style="display:none"':''}>
+        <div class="fgrid fg2 mt1">
+          <div class="fg"><label class="flbl">Fecha inicio *</label><input type="date" id="ef-fecha-rec" class="fc" value="${e?.fechaInicio||fecha||Utils.today()}"></div>
+          <div class="fg"><label class="flbl">Frecuencia</label>
+            <select id="ef-recurrencia" class="fc">${['Diario','Semanal','Mensual','Trimestral','Semestral','Anual'].map(f=>`<option value="${f}"${e?.recurrencia===f?' selected':''}>${f}</option>`).join('')}</select></div>
+        </div>
       </div>
       <div class="fg"><label class="flbl">Tipo</label>
         <select id="ef-tipo" class="fc">${['visita','vacunacion','pago','cosecha','reunion','otro'].map(t=>`<option value="${t}"${e?.tipo===t?' selected':''}>${Utils.eventoLabel(t)}</option>`).join('')}</select></div>
@@ -818,10 +861,25 @@ const Calendario = {
   },
 
   async saveEvento(id){
-    const tit=document.getElementById('ef-tit').value.trim(),fecha=document.getElementById('ef-fecha').value;
-    if(!tit||!fecha){UI.showToast('Título y fecha son obligatorios','war');return false;}
-    const data={titulo:tit,fecha,hora:document.getElementById('ef-hora').value||null,tipo:document.getElementById('ef-tipo').value,
-      descripcion:document.getElementById('ef-desc').value.trim(),uid:App.user.uid,modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
+    const tit=document.getElementById('ef-tit').value.trim();
+    if(!tit){UI.showToast('El título es obligatorio','war');return false;}
+    const tf=document.getElementById('ef-tipo-fecha').value;
+    let fechaInicio,fechaFin=null,recurrencia=null,fecha;
+    if(tf==='unica'){
+      fechaInicio=document.getElementById('ef-fecha').value;fecha=fechaInicio;
+      if(!fechaInicio){UI.showToast('La fecha es obligatoria','war');return false;}
+    } else if(tf==='rango'){
+      fechaInicio=document.getElementById('ef-fecha-ini').value;fechaFin=document.getElementById('ef-fecha-fin').value;fecha=fechaInicio;
+      if(!fechaInicio||!fechaFin){UI.showToast('Las fechas son obligatorias','war');return false;}
+    } else {
+      fechaInicio=document.getElementById('ef-fecha-rec').value;recurrencia=document.getElementById('ef-recurrencia').value;fecha=fechaInicio;
+      if(!fechaInicio){UI.showToast('La fecha de inicio es obligatoria','war');return false;}
+    }
+    const data={titulo:tit,fecha,fechaInicio,fechaFin,recurrencia,tipoFecha:tf,
+      hora:(tf==='unica'?document.getElementById('ef-hora').value:null)||null,
+      tipo:document.getElementById('ef-tipo').value,
+      descripcion:document.getElementById('ef-desc').value.trim(),
+      uid:App.user.uid,modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
     if(id){await App.db.collection('eventos').doc(id).update(data);UI.showToast('Evento actualizado','suc');}
     else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('eventos').add(data);UI.showToast('Evento registrado','suc');}
   },
@@ -895,6 +953,145 @@ const Contactos = {
     else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('contactos').add(data);UI.showToast('Contacto registrado','suc');}
   },
   del(id){UI.confirm('¿Eliminar este contacto?',async()=>{await App.db.collection('contactos').doc(id).delete();UI.showToast('Contacto eliminado','suc');});}
+};
+
+// =====================================================
+// INVENTARIO
+// =====================================================
+const Inventario = {
+  _data:[], _q:'', _cat:'', _ubi:'', _est:'',
+
+  load(){
+    const unsub=App.db.collection('inventario').orderBy('nombre').limit(500)
+      .onSnapshot(s=>{Inventario._data=s.docs.map(d=>({id:d.id,...d.data()}));Inventario.render();Inventario.stats();},e=>console.error(e));
+    App._subs.push(unsub);
+  },
+
+  filtered(){return Inventario._data.filter(i=>{
+    const q=Inventario._q.toLowerCase();
+    if(q&&!(i.nombre||'').toLowerCase().includes(q))return false;
+    if(Inventario._cat&&i.categoria!==Inventario._cat)return false;
+    if(Inventario._ubi&&i.ubicacion!==Inventario._ubi)return false;
+    if(Inventario._est&&i.estado!==Inventario._est)return false;
+    return true;
+  });},
+
+  stats(){
+    const list=Inventario._data;
+    const valor=list.reduce((a,i)=>a+(i.costoTotal||(i.costoUnitario||0)*(i.cantidad||0)),0);
+    document.getElementById('inv-total').textContent=list.length;
+    document.getElementById('inv-valor').textContent=Utils.fmt$(valor);
+  },
+
+  render(){
+    const list=Inventario.filtered();
+    const el=document.getElementById('inventario-list');if(!el)return;
+    if(!list.length){el.innerHTML=`<div class="empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><h3>Sin items registrados</h3><p>Agrega tu primer item</p></div>`;return;}
+    const estBadge={Bueno:'b-ok',Regular:'b-dor',Malo:'b-rojo','Dado de baja':'b-gris'};
+    el.innerHTML=list.map(i=>{
+      const ct=i.costoTotal||((i.costoUnitario||0)*(i.cantidad||0));
+      return `<div class="card mb2" style="cursor:pointer" onclick="Inventario.openForm('${i.id}')">
+        <div class="flex jc-sb items-c">
+          <div style="flex:1;min-width:0">
+            <div class="fb">${Utils.sanitize(i.nombre)}</div>
+            <div class="txs c-gris">${i.categoria||'—'} · ${i.ubicacion||'—'}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            <span class="badge ${estBadge[i.estado]||'b-gris'}">${i.estado||'—'}</span>
+            ${App.canDelete()?`<button class="bico dan" onclick="event.stopPropagation();Inventario.del('${i.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:.83rem">
+          <div>Cantidad: <strong>${i.cantidad||0}${i.unidad?' '+i.unidad:''}</strong></div>
+          ${i.costoUnitario?`<div>Costo unit.: <strong>${Utils.fmt$(i.costoUnitario)}</strong></div>`:''}
+          ${ct?`<div>Valor total: <strong class="money">${Utils.fmt$(ct)}</strong></div>`:''}
+          ${i.fechaCompra?`<div>Compra: ${Utils.fmtDate(i.fechaCompra)}</div>`:''}
+          ${i.numeroFactura?`<div>Fact: ${Utils.sanitize(i.numeroFactura)}</div>`:''}
+        </div>
+        ${i.observaciones?`<div class="txs c-gris mt1">${Utils.sanitize(i.observaciones)}</div>`:''}
+      </div>`;
+    }).join('');
+  },
+
+  filter(q){Inventario._q=q;Inventario.render();},
+  filterCat(c){Inventario._cat=c;Inventario.render();},
+  filterUbi(u){Inventario._ubi=u;Inventario.render();},
+  filterEst(e){Inventario._est=e;Inventario.render();},
+
+  openForm(id=null){
+    if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
+    const i=id?Inventario._data.find(x=>x.id===id):null;
+    UI.showModal({title:i?'Editar Item':'Nuevo Item',size:'lg',body:`
+      <div class="fgrid fg2">
+        <div class="fg"><label class="flbl">Nombre *</label><input type="text" id="if-nom" class="fc" value="${Utils.sanitize(i?.nombre||'')}" required maxlength="120" placeholder="Ej: Fumigadora"></div>
+        <div class="fg"><label class="flbl">Categoría</label>
+          <select id="if-cat" class="fc">${['Herramienta','Utensilio','Equipo','Maquinaria','Otro'].map(c=>`<option value="${c}"${i?.categoria===c?' selected':''}>${c}</option>`).join('')}</select></div>
+      </div>
+      <div class="fgrid fg3 mt2">
+        <div class="fg"><label class="flbl">Cantidad</label><input type="number" id="if-cant" class="fc" value="${i?.cantidad||''}" min="0" step="0.01" placeholder="0" oninput="Inventario._calcTotal()"></div>
+        <div class="fg"><label class="flbl">Unidad</label><input type="text" id="if-uni" class="fc" value="${Utils.sanitize(i?.unidad||'')}" placeholder="unidad, lt, kg"></div>
+        <div class="fg"><label class="flbl">Costo unitario ($)</label><input type="number" id="if-cu" class="fc" value="${i?.costoUnitario||''}" min="0" step="0.01" placeholder="0.00" oninput="Inventario._calcTotal()"></div>
+      </div>
+      <div id="if-total-wrap" style="background:var(--verde-pale);border-radius:var(--rsm);padding:8px 14px;margin-top:8px;display:${(i?.cantidad&&i?.costoUnitario)?'block':'none'}">
+        <span style="font-size:.83rem;color:var(--verde)">💰 Costo total: <strong id="if-total">${Utils.fmt$((i?.cantidad||0)*(i?.costoUnitario||0))}</strong></span>
+      </div>
+      <div class="fgrid fg2 mt2">
+        <div class="fg"><label class="flbl">Ubicación</label>
+          <select id="if-ubi" class="fc">${['Casa','Bodega','Galpón','Campo'].map(u=>`<option value="${u}"${(i?.ubicacion||'Casa')===u?' selected':''}>${u}</option>`).join('')}</select></div>
+        <div class="fg"><label class="flbl">Estado</label>
+          <select id="if-est" class="fc">${['Bueno','Regular','Malo','Dado de baja'].map(s=>`<option value="${s}"${(i?.estado||'Bueno')===s?' selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="fgrid fg2 mt2">
+        <div class="fg"><label class="flbl">Fecha compra</label><input type="date" id="if-fec" class="fc" value="${i?.fechaCompra||''}"></div>
+        <div class="fg"><label class="flbl">N° Factura</label><input type="text" id="if-fac" class="fc" value="${Utils.sanitize(i?.numeroFactura||'')}" placeholder="001-001-000123"></div>
+      </div>
+      <div class="fg mt2"><label class="flbl">Observaciones</label><textarea id="if-obs" class="fc" rows="2">${Utils.sanitize(i?.observaciones||'')}</textarea></div>
+      <div class="fg mt2"><label class="flbl">Foto de factura (opcional)</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button type="button" onclick="document.getElementById('if-foto-cam').click()" style="flex:1;padding:10px 8px;border:1.5px solid #1B4332;background:#D8F3DC;color:#1B4332;border-radius:8px;cursor:pointer;font-size:.87rem;font-weight:600">📷 Tomar foto</button>
+          <input type="file" id="if-foto-cam" accept="image/*" capture="environment" onchange="Inventario._previewFoto(this)" style="display:none">
+          <button type="button" onclick="document.getElementById('if-foto-gal').click()" style="flex:1;padding:10px 8px;border:1.5px solid #adb5bd;background:#f8f9fa;color:#495057;border-radius:8px;cursor:pointer;font-size:.87rem;font-weight:600">🖼️ Subir imagen</button>
+          <input type="file" id="if-foto-gal" accept="image/*" onchange="Inventario._previewFoto(this)" style="display:none">
+        </div>
+        <div id="if-prev">${i?.fotoFactura?`<div class="photo-prev"><img src="${i.fotoFactura}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"></div>`:''}</div>
+      </div>`,
+      onSave:()=>Inventario.save(id)
+    });
+  },
+
+  _calcTotal(){
+    const cant=parseFloat(document.getElementById('if-cant')?.value)||0;
+    const cu=parseFloat(document.getElementById('if-cu')?.value)||0;
+    const wrap=document.getElementById('if-total-wrap'),tot=document.getElementById('if-total');
+    if(cant>0&&cu>0){if(wrap)wrap.style.display='block';if(tot)tot.textContent=Utils.fmt$(cant*cu);}
+    else{if(wrap)wrap.style.display='none';}
+  },
+
+  _previewFoto(inp){
+    if(!inp.files[0])return;
+    const r=new FileReader();r.onload=e=>{document.getElementById('if-prev').innerHTML=`<div class="photo-prev"><img src="${e.target.result}" style="max-width:200px;max-height:200px;border-radius:12px;object-fit:contain"><button class="photo-prev-rm" type="button" onclick="['if-foto-cam','if-foto-gal'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('if-prev').innerHTML=''">✕</button></div>`;};r.readAsDataURL(inp.files[0]);
+  },
+
+  async save(id){
+    const nom=document.getElementById('if-nom').value.trim();
+    if(!nom){UI.showToast('El nombre es obligatorio','war');return false;}
+    const cant=parseFloat(document.getElementById('if-cant').value)||0;
+    const cu=parseFloat(document.getElementById('if-cu').value)||null;
+    const data={nombre:nom,categoria:document.getElementById('if-cat').value,
+      cantidad:cant,unidad:document.getElementById('if-uni').value.trim(),
+      costoUnitario:cu,costoTotal:cu?cant*cu:null,
+      ubicacion:document.getElementById('if-ubi').value,estado:document.getElementById('if-est').value,
+      fechaCompra:document.getElementById('if-fec').value||null,
+      numeroFactura:document.getElementById('if-fac').value.trim(),
+      observaciones:document.getElementById('if-obs').value.trim(),
+      uid:App.user.uid,modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
+    const file=document.getElementById('if-foto-cam')?.files[0]||document.getElementById('if-foto-gal')?.files[0];
+    if(file){UI.loading(true);try{data.fotoFactura=await Utils.compressImg(file,800,800,0.7);}catch(e){}UI.loading(false);}
+    if(id){await App.db.collection('inventario').doc(id).update(data);UI.showToast('Item actualizado','suc');}
+    else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('inventario').add(data);UI.showToast('Item registrado','suc');}
+  },
+
+  del(id){UI.confirm('¿Eliminar este item?',async()=>{await App.db.collection('inventario').doc(id).delete();UI.showToast('Item eliminado','suc');});}
 };
 
 // =====================================================

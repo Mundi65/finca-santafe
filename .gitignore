@@ -16,3 +16,9 @@ Thumbs.db
 .vscode/
 *.suo
 *.user
+
+# Sensitive files
+token*.txt
+clave*.txt
+prompt.txt
+borrar-demo.html
