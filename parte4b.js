@@ -753,9 +753,20 @@ const Agricola = {
 // =====================================================
 const Calendario = {
   _year:new Date().getFullYear(), _month:new Date().getMonth(), _eventos:[],
+  _histQ:'', _histMes:'',
+
+  _CAT_COLORS:{visita:'#084298,#CFE2FF',vacunacion:'#0F5132,#D1E7DD',pago:'#842029,#F8D7DA',cosecha:'#664D03,#FFF3CD',reunion:'#5A1F8A,#E8D5F5',otro:'#41464B,#E2E3E5'},
+  _COLOR_BG:{rojo:'#FFEEF0',naranja:'#FFE8D0',azul:'#CFE2FF',verde:'#D1E7DD',morado:'#E8D5F5',gris:'#E2E3E5',dorado:'#FFF3CD',celeste:'#D0E8F8'},
+  _COLOR_TXT:{rojo:'#842029',naranja:'#7C3005',azul:'#084298',verde:'#0F5132',morado:'#5A1F8A',gris:'#41464B',dorado:'#664D03',celeste:'#0A4B6E'},
+
+  _evColor(e){
+    if(e.color&&Calendario._COLOR_BG[e.color])return{bg:Calendario._COLOR_BG[e.color],text:Calendario._COLOR_TXT[e.color]};
+    const p=Calendario._CAT_COLORS[e.tipo||'otro']||Calendario._CAT_COLORS.otro;
+    const[text,bg]=p.split(',');return{bg,text};
+  },
 
   load(){
-    const unsub=App.db.collection('eventos').orderBy('fecha').limit(300)
+    const unsub=App.db.collection('eventos').orderBy('fecha','desc').limit(1000)
       .onSnapshot(s=>{Calendario._eventos=s.docs.map(d=>({id:d.id,...d.data()}));Calendario.render();Calendario.renderUpcoming();},e=>console.error(e));
     App._subs.push(unsub);
     Calendario.render();
@@ -771,12 +782,17 @@ const Calendario = {
       const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const dayEvts=Calendario._eventos.filter(e=>{
         if(e.tipoFecha==='rango')return dateStr>=(e.fechaInicio||e.fecha)&&dateStr<=(e.fechaFin||e.fechaInicio||e.fecha);
+        if(e.tipoFecha==='recurrente')return dateStr>=(e.fechaInicio||e.fecha);
         return(e.fecha||e.fechaInicio)===dateStr;
       });
       const isToday=dateStr===today;
       html+=`<div class="cday${isToday?' today':''}" onclick="Calendario.openEventoForm('${dateStr}')">
         <div class="cdnum">${isToday?`<div style="display:flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:50%;background:var(--verde);color:white;font-size:.78rem;font-weight:600">${d}</div>`:d}</div>
-        <div class="cevts">${dayEvts.slice(0,3).map(e=>`<div class="cevt ${e.tipo||'otro'}" onclick="event.stopPropagation();Calendario.openEventoForm('${e.fecha||e.fechaInicio}','${e.id}')" title="${Utils.sanitize(e.titulo)}">${Utils.sanitize(e.titulo)}${e.tipoFecha==='recurrente'?' 🔄':e.tipoFecha==='rango'?' ↔':''}</div>`).join('')}${dayEvts.length>3?`<div class="txs c-gris">+${dayEvts.length-3} más</div>`:''}</div>
+        <div class="cevts">${dayEvts.slice(0,3).map(e=>{
+          const c=Calendario._evColor(e);
+          const enCurso=isToday&&e.tipoFecha==='rango'&&dateStr>=(e.fechaInicio||e.fecha)&&dateStr<=(e.fechaFin||e.fechaInicio||e.fecha);
+          return`<div class="cevt-item${enCurso?' en-curso':''}" style="background:${c.bg};color:${c.text}" onclick="event.stopPropagation();Calendario.verEvento('${e.id}')" title="${Utils.sanitize(e.titulo)}">${Utils.sanitize(e.titulo)}${e.tipoFecha==='recurrente'?' ↻':e.tipoFecha==='rango'?' ↔':''}</div>`;
+        }).join('')}${dayEvts.length>3?`<div class="txs c-gris">+${dayEvts.length-3} más</div>`:''}</div>
       </div>`;
     }
     const rem=42-first-days;for(let d=1;d<=rem;d++)html+=`<div class="cday other"><div class="cdnum">${d}</div></div>`;
@@ -784,33 +800,111 @@ const Calendario = {
   },
 
   _fmtEvFecha(e){
-    if(e.tipoFecha==='rango')return`${Utils.fmtDate(e.fechaInicio)} al ${Utils.fmtDate(e.fechaFin)}`;
-    if(e.tipoFecha==='recurrente')return`${Utils.fmtDate(e.fechaInicio)} <span class="badge b-azul" style="font-size:.7rem;vertical-align:middle">${e.recurrencia}</span>`;
+    if(e.tipoFecha==='rango'){
+      const today=Utils.today();
+      if(today>=(e.fechaInicio||e.fecha)&&today<=(e.fechaFin||e.fechaInicio)){
+        const d1=new Date(e.fechaInicio||e.fecha),d2=new Date(e.fechaFin),dt=new Date(today);
+        const totalDias=Math.round((d2-d1)/86400000)+1,diaActual=Math.round((dt-d1)/86400000)+1;
+        return`${Utils.fmtDate(e.fechaInicio)} al ${Utils.fmtDate(e.fechaFin)} <span class="badge" style="background:#D1E7DD;color:#0F5132;font-size:.68rem">En curso · día ${diaActual} de ${totalDias}</span>`;
+      }
+      return`${Utils.fmtDate(e.fechaInicio)} al ${Utils.fmtDate(e.fechaFin)}`;
+    }
+    if(e.tipoFecha==='recurrente')return`${Utils.fmtDate(e.fechaInicio||e.fecha)} <span class="badge b-azul" style="font-size:.7rem;vertical-align:middle">${e.recurrencia}</span>`;
     return`${Utils.fmtDate(e.fecha||e.fechaInicio)}${e.hora?' '+e.hora:''}`;
   },
 
   _evEditKey(e){return e.fecha||e.fechaInicio||Utils.today();},
 
+  verEvento(id){
+    const e=Calendario._eventos.find(x=>x.id===id);if(!e)return;
+    const c=Calendario._evColor(e);const today=Utils.today();
+    let estadoBadge='';
+    if(e.tipoFecha==='rango'){
+      if(today>=(e.fechaInicio||e.fecha)&&today<=(e.fechaFin||e.fechaInicio)){
+        const d1=new Date(e.fechaInicio||e.fecha),d2=new Date(e.fechaFin),dt=new Date(today);
+        const totalDias=Math.round((d2-d1)/86400000)+1,diaActual=Math.round((dt-d1)/86400000)+1;
+        estadoBadge=`<span class="badge" style="background:#D1E7DD;color:#0F5132">En curso · día ${diaActual} de ${totalDias}</span> `;
+      } else if(today>(e.fechaFin||'')) estadoBadge=`<span class="badge b-gris">Finalizado</span> `;
+      else estadoBadge=`<span class="badge b-azul">Próximo</span> `;
+    } else if(e.tipoFecha==='recurrente') estadoBadge=`<span class="badge b-azul">Recurrente</span> `;
+    const histHtml=e.historialCambios?.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--g100)"><div class="txs c-gris mb1">Modificado:</div>${e.historialCambios.slice(-4).reverse().map(h=>`<div class="txs mb1"><span class="c-gris">${h.fecha||'—'}</span> · <b>${h.campo}</b>: ${Utils.sanitize(String(h.valorAnterior||'—'))} → ${Utils.sanitize(String(h.valorNuevo||'—'))}</div>`).join('')}</div>`:'';
+    const editKey=Calendario._evEditKey(e);
+    UI.showModal({title:Utils.sanitize(e.titulo),hideSave:true,body:`
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div style="width:5px;border-radius:3px;background:${c.text};flex-shrink:0;min-height:44px"></div>
+        <div style="flex:1">
+          <div class="flex gap1 mb1 flex-wrap">${estadoBadge}<span class="badge" style="background:${c.bg};color:${c.text}">${Utils.eventoLabel(e.tipo)}</span></div>
+          <div class="tsm mb1">${Calendario._fmtEvFecha(e)}</div>
+          ${e.descripcion?`<div class="txs c-gris mt1">${Utils.sanitize(e.descripcion)}</div>`:''}
+          ${histHtml}
+        </div>
+      </div>
+      <div class="flex gap2 mt2">
+        <button class="btn btn-dor btn-sm" onclick="UI.closeModal();Calendario.openEventoForm('${editKey}','${id}')">Editar</button>
+        ${App.canDelete()?`<button class="btn btn-sm" style="background:#fff5f5;color:#dc3545;border:1px solid #f5c2c7" onclick="UI.closeModal();Calendario.del('${id}')">Eliminar</button>`:''}
+      </div>`});
+  },
+
   renderUpcoming(){
     const today=Utils.today();
     const up=Calendario._eventos.filter(e=>{
       if(e.tipoFecha==='recurrente')return(e.fechaInicio||e.fecha)<=today;
-      return(e.fechaInicio||e.fecha||'')>=today;
-    }).sort((a,b)=>(a.fechaInicio||a.fecha||'').localeCompare(b.fechaInicio||b.fecha||'')).slice(0,10);
-    const el=document.getElementById('upcoming-list');
+      const fin=e.fechaFin||e.fechaInicio||e.fecha||'';
+      return fin>=today;
+    }).sort((a,b)=>(a.fechaInicio||a.fecha||'').localeCompare(b.fechaInicio||b.fecha||'')).slice(0,15);
+    const el=document.getElementById('upcoming-list');if(!el)return;
     document.getElementById('upcoming-count').textContent=up.length+' evento'+(up.length!==1?'s':'');
     if(!up.length){el.innerHTML=`<div class="empty" style="padding:24px;border:none"><p>No hay eventos próximos</p></div>`;return;}
-    el.innerHTML=up.map(e=>`<div class="flex jc-sb items-c" style="padding:9px 0;border-bottom:1px solid var(--g100)">
-      <div class="flex gap2 items-c">
-        <span class="cevt ${e.tipo||'otro'}" style="min-width:10px">&nbsp;</span>
-        <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
-        <div class="txs c-gris">${Calendario._fmtEvFecha(e)} · ${Utils.eventoLabel(e.tipo)}</div></div>
-      </div>
-      <div class="flex gap1">
-        <button class="bico" onclick="Calendario.openEventoForm('${Calendario._evEditKey(e)}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        ${App.canDelete()?`<button class="bico dan" onclick="Calendario.del('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
-      </div>
-    </div>`).join('');
+    el.innerHTML=up.map(e=>{
+      const c=Calendario._evColor(e);
+      return`<div class="flex jc-sb items-c" style="padding:9px 0;border-bottom:1px solid var(--g100)">
+        <div class="flex gap2 items-c">
+          <div style="width:4px;height:36px;border-radius:2px;background:${c.text};flex-shrink:0"></div>
+          <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
+          <div class="txs c-gris">${Calendario._fmtEvFecha(e)} · ${Utils.eventoLabel(e.tipo)}</div></div>
+        </div>
+        <div class="flex gap1">
+          <button class="bico" onclick="Calendario.verEvento('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+          <button class="bico" onclick="Calendario.openEventoForm('${Calendario._evEditKey(e)}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          ${App.canDelete()?`<button class="bico dan" onclick="Calendario.del('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  renderHistorial(){
+    const el=document.getElementById('historial-list');if(!el)return;
+    let list=[...Calendario._eventos];
+    if(Calendario._histQ){const q=Calendario._histQ.toLowerCase();list=list.filter(e=>(e.titulo||'').toLowerCase().includes(q));}
+    if(Calendario._histMes)list=list.filter(e=>(e.fechaInicio||e.fecha||'').startsWith(Calendario._histMes));
+    list.sort((a,b)=>(b.fechaInicio||b.fecha||'').localeCompare(a.fechaInicio||a.fecha||''));
+    document.getElementById('historial-count').textContent=list.length+' evento'+(list.length!==1?'s':'');
+    const today=Utils.today();
+    if(!list.length){el.innerHTML=`<div class="empty" style="padding:24px;border:none"><p>Sin eventos que coincidan</p></div>`;return;}
+    el.innerHTML=list.map(e=>{
+      const isPast=(e.fechaFin||e.fechaInicio||e.fecha||'')<today&&e.tipoFecha!=='recurrente';
+      const c=Calendario._evColor(e);
+      return`<div class="flex jc-sb items-c" style="padding:9px 0;border-bottom:1px solid var(--g100);opacity:${isPast?'.55':'1'}">
+        <div class="flex gap2 items-c">
+          <div style="width:4px;height:36px;border-radius:2px;background:${c.text};flex-shrink:0"></div>
+          <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
+          <div class="txs c-gris">${Calendario._fmtEvFecha(e)} · ${Utils.eventoLabel(e.tipo)}</div></div>
+        </div>
+        <div class="flex gap1">
+          <button class="bico" onclick="Calendario.verEvento('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+          <button class="bico" onclick="Calendario.openEventoForm('${Calendario._evEditKey(e)}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          ${App.canDelete()?`<button class="bico dan" onclick="Calendario.del('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  switchTab(tab,btn){
+    document.querySelectorAll('#mod-calendario .tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('cal-tbc-upcoming').style.display=tab==='upcoming'?'':'none';
+    document.getElementById('cal-tbc-historial').style.display=tab==='historial'?'':'none';
+    if(tab==='historial')Calendario.renderHistorial();
   },
 
   prevMonth(){if(Calendario._month===0){Calendario._month=11;Calendario._year--;}else Calendario._month--;Calendario.render();},
@@ -827,6 +921,8 @@ const Calendario = {
     if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
     const e=id?Calendario._eventos.find(x=>x.id===id):null;
     const tf=e?.tipoFecha||'unica';
+    const colorOpts=['rojo','naranja','azul','verde','morado','gris','dorado','celeste'];
+    const colorLabels={rojo:'Rojo (Sanidad)',naranja:'Naranja (Alimentación)',azul:'Azul (General)',verde:'Verde (Producción)',morado:'Morado (Admin.)',gris:'Gris (Otro)',dorado:'Dorado (Cosecha)',celeste:'Celeste (Visita)'};
     UI.showModal({title:e?'Editar Evento':'Nuevo Evento',body:`
       <div class="fg"><label class="flbl">Título *</label><input type="text" id="ef-tit" class="fc" value="${Utils.sanitize(e?.titulo||'')}" required maxlength="120"></div>
       <div class="fg"><label class="flbl">Tipo de fecha</label>
@@ -854,8 +950,15 @@ const Calendario = {
             <select id="ef-recurrencia" class="fc">${['Diario','Semanal','Mensual','Trimestral','Semestral','Anual'].map(f=>`<option value="${f}"${e?.recurrencia===f?' selected':''}>${f}</option>`).join('')}</select></div>
         </div>
       </div>
-      <div class="fg"><label class="flbl">Tipo</label>
-        <select id="ef-tipo" class="fc">${['visita','vacunacion','pago','cosecha','reunion','otro'].map(t=>`<option value="${t}"${e?.tipo===t?' selected':''}>${Utils.eventoLabel(t)}</option>`).join('')}</select></div>
+      <div class="fgrid fg2">
+        <div class="fg"><label class="flbl">Tipo</label>
+          <select id="ef-tipo" class="fc">${['visita','vacunacion','pago','cosecha','reunion','otro'].map(t=>`<option value="${t}"${e?.tipo===t?' selected':''}>${Utils.eventoLabel(t)}</option>`).join('')}</select></div>
+        <div class="fg"><label class="flbl">Color</label>
+          <select id="ef-color" class="fc">
+            <option value="">Auto (por tipo)</option>
+            ${colorOpts.map(c=>`<option value="${c}"${e?.color===c?' selected':''}>${colorLabels[c]}</option>`).join('')}
+          </select></div>
+      </div>
       <div class="fg"><label class="flbl">Descripción</label><textarea id="ef-desc" class="fc" rows="2">${Utils.sanitize(e?.descripcion||'')}</textarea></div>`,
       onSave:()=>Calendario.saveEvento(id)});
   },
@@ -875,13 +978,24 @@ const Calendario = {
       fechaInicio=document.getElementById('ef-fecha-rec').value;recurrencia=document.getElementById('ef-recurrencia').value;fecha=fechaInicio;
       if(!fechaInicio){UI.showToast('La fecha de inicio es obligatoria','war');return false;}
     }
-    const data={titulo:tit,fecha,fechaInicio,fechaFin,recurrencia,tipoFecha:tf,
+    const color=document.getElementById('ef-color').value||null;
+    const data={titulo:tit,fecha,fechaInicio,fechaFin,recurrencia,tipoFecha:tf,color,
       hora:(tf==='unica'?document.getElementById('ef-hora').value:null)||null,
       tipo:document.getElementById('ef-tipo').value,
       descripcion:document.getElementById('ef-desc').value.trim(),
       uid:App.user.uid,modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
-    if(id){await App.db.collection('eventos').doc(id).update(data);UI.showToast('Evento actualizado','suc');}
-    else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('eventos').add(data);UI.showToast('Evento registrado','suc');}
+    if(id){
+      const old=Calendario._eventos.find(x=>x.id===id);
+      const cambios=[];
+      [['fecha','Fecha'],['fechaInicio','F. inicio'],['fechaFin','F. fin'],['recurrencia','Frecuencia'],['tipoFecha','Tipo']].forEach(([k,lbl])=>{
+        if(old&&old[k]!==data[k]&&(old[k]||data[k]))cambios.push({campo:lbl,valorAnterior:old[k]||null,valorNuevo:data[k]||null,fecha:Utils.today(),usuario:App.profile?.nombre||App.user?.email||'?'});
+      });
+      if(cambios.length)data.historialCambios=firebase.firestore.FieldValue.arrayUnion(...cambios);
+      await App.db.collection('eventos').doc(id).update(data);UI.showToast('Evento actualizado','suc');
+    } else {
+      data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();
+      await App.db.collection('eventos').add(data);UI.showToast('Evento registrado','suc');
+    }
   },
   del(id){UI.confirm('¿Eliminar este evento?',async()=>{await App.db.collection('eventos').doc(id).delete();UI.showToast('Evento eliminado','suc');});}
 };

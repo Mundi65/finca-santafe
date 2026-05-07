@@ -497,14 +497,15 @@ const Dashboard = {
   async load() {
     const now = new Date();
     const hace30   = new Date(now - 30*24*60*60*1000);
-    const anoInicio = new Date(now.getFullYear(), 0, 1);
+    const today    = Utils.today();
     try {
-      const [gSnap, iSnap, ganSnap, lotSnap, tarSnap] = await Promise.all([
+      const [gSnap, iSnap, ganSnap, lotSnap, tarSnap, evSnap] = await Promise.all([
         App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
         App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get(),
         App.db.collection('ganado').where('estado','==','activo').get(),
         App.db.collection('agricola').get(),
-        App.db.collection('tareas').where('estado','!=','completada').limit(5).get()
+        App.db.collection('tareas').where('estado','!=','completada').limit(5).get(),
+        App.db.collection('eventos').orderBy('fecha','desc').limit(500).get()
       ]);
       const gastos30   = gSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
       const ingresos30 = iSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
@@ -517,6 +518,9 @@ const Dashboard = {
       document.getElementById('ds-balance').className   = `sc-val money ${totalI>=totalG?'pos':'neg'}`;
       document.getElementById('ds-ganado').textContent  = ganSnap.size;
       document.getElementById('ds-lotes').textContent   = lotSnap.size;
+
+      // Hoy en la finca
+      Dashboard.renderHoy(evSnap.docs.map(d=>({id:d.id,...d.data()})), today);
 
       // Last gastos
       const lastG = gastos30.slice(0,4);
@@ -546,6 +550,41 @@ const Dashboard = {
       // Charts
       await Dashboard.renderCharts();
     } catch(e) { console.error('Dashboard load:', e); }
+  },
+
+  renderHoy(eventos, today) {
+    const el = document.getElementById('dash-hoy-list');
+    if (!el) return;
+    const CAT_COLORS = {visita:'#084298,#CFE2FF',vacunacion:'#0F5132,#D1E7DD',pago:'#842029,#F8D7DA',cosecha:'#664D03,#FFF3CD',reunion:'#5A1F8A,#E8D5F5',otro:'#41464B,#E2E3E5'};
+    const evHoy = eventos.filter(e => {
+      if (e.tipoFecha === 'rango') return today >= (e.fechaInicio||e.fecha) && today <= (e.fechaFin||e.fechaInicio||e.fecha);
+      if (e.tipoFecha === 'recurrente') return (e.fechaInicio||e.fecha) <= today;
+      return (e.fecha||e.fechaInicio) === today;
+    });
+    if (!evHoy.length) {
+      el.innerHTML = '<div class="empty" style="padding:16px;border:none"><p>Sin actividades programadas para hoy</p></div>';
+      return;
+    }
+    el.innerHTML = evHoy.map(e => {
+      const p = CAT_COLORS[e.tipo||'otro'] || CAT_COLORS.otro;
+      const [text, bg] = p.split(',');
+      let extra = '';
+      if (e.tipoFecha === 'rango') {
+        const d1=new Date(e.fechaInicio||e.fecha),d2=new Date(e.fechaFin),dt=new Date(today);
+        const totalDias=Math.round((d2-d1)/86400000)+1,diaActual=Math.round((dt-d1)/86400000)+1;
+        extra = ` · Día ${diaActual} de ${totalDias}`;
+      }
+      const tipoLabel = {unica:'Fecha única',rango:'En curso',recurrente:'Recurrente'}[e.tipoFecha||'unica'] || 'Evento';
+      const badge = e.tipoFecha==='rango'?'En curso':e.tipoFecha==='recurrente'?'Recurrente':'Hoy';
+      return `<div class="hoy-ev-item">
+        <div class="hoy-ev-bar" style="background:${text}"></div>
+        <div style="flex:1">
+          <div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
+          <div class="txs c-gris">${tipoLabel}${extra} · ${Utils.eventoLabel(e.tipo)}</div>
+        </div>
+        <span class="badge txs" style="background:${bg};color:${text}">${badge}</span>
+      </div>`;
+    }).join('');
   },
 
   async renderCharts() {

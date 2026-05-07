@@ -469,6 +469,12 @@ textarea.fc{resize:vertical;min-height:76px}
 .cevt.pago{background:var(--rojo-pale);color:var(--rojo)}
 .cevt.cos{background:var(--dorado-pale);color:var(--dorado-dk)}
 .cevt.otro{background:var(--g200);color:var(--g700)}
+.cevt-item{font-size:.62rem;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;cursor:pointer;margin-bottom:2px}
+@keyframes pulse-ev{0%,100%{box-shadow:0 0 0 0 rgba(15,81,50,.35)}70%{box-shadow:0 0 0 5px rgba(15,81,50,0)}}
+.cevt-item.en-curso{animation:pulse-ev 1.8s infinite;border:1px solid rgba(15,81,50,.4)}
+.hoy-ev-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--g100)}
+.hoy-ev-item:last-child{border-bottom:none}
+.hoy-ev-bar{width:4px;border-radius:2px;min-height:38px;flex-shrink:0}
 @media(max-width:560px){.cday{min-height:46px;padding:3px}.cevts{display:none}}
 
 /* ===================================================
@@ -837,6 +843,17 @@ textarea.fc{resize:vertical;min-height:76px}
       </div>
       <div class="sc-val" id="ds-lotes">0</div>
       <div class="sc-lbl">Lotes agrícolas</div>
+    </div>
+  </div>
+
+  <!-- Hoy en la finca -->
+  <div class="card mb2" id="dash-hoy-wrap">
+    <div class="flex jc-sb items-c mb2">
+      <span class="fs tsm">📅 Hoy en la finca</span>
+      <button class="btn btn-ghost btn-sm" onclick="Nav.goTo('calendario')">Ver calendario</button>
+    </div>
+    <div id="dash-hoy-list">
+      <div class="empty" style="padding:16px;border:none"><p>Sin actividades programadas para hoy</p></div>
     </div>
   </div>
 
@@ -1311,13 +1328,14 @@ textarea.fc{resize:vertical;min-height:76px}
     </button>
   </div>
 
-  <!-- Leyenda -->
+  <!-- Leyenda colores -->
   <div class="flex gap2 mb2 flex-wrap">
-    <span class="badge b-azul">Visita</span>
-    <span class="badge b-ok">Vacunación</span>
-    <span class="badge b-rojo">Pago</span>
-    <span class="badge b-dor">Cosecha</span>
-    <span class="badge b-gris">Otro</span>
+    <span class="badge" style="background:#CFE2FF;color:#084298">Visita</span>
+    <span class="badge" style="background:#D1E7DD;color:#0F5132">Vacunación</span>
+    <span class="badge" style="background:#F8D7DA;color:#842029">Pago</span>
+    <span class="badge" style="background:#FFF3CD;color:#664D03">Cosecha</span>
+    <span class="badge" style="background:#E8D5F5;color:#5A1F8A">Reunión</span>
+    <span class="badge" style="background:#E2E3E5;color:#41464B">Otro</span>
   </div>
 
   <!-- Calendar grid -->
@@ -1330,14 +1348,48 @@ textarea.fc{resize:vertical;min-height:76px}
     <div class="cal-body" id="cal-body"><!-- JS renders days --></div>
   </div>
 
-  <!-- Upcoming events -->
-  <div class="card mt3">
-    <div class="flex jc-sb items-c mb2">
-      <span class="fs tsm">Próximos eventos</span>
-      <span class="txs c-gris" id="upcoming-count">0 eventos</span>
+  <!-- Tabs: Próximos / Historial -->
+  <div class="tabs mt3">
+    <button class="tab active" onclick="Calendario.switchTab('upcoming',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Próximos
+    </button>
+    <button class="tab" onclick="Calendario.switchTab('historial',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+      Historial
+    </button>
+  </div>
+
+  <!-- Tab: Próximos -->
+  <div id="cal-tbc-upcoming" class="tbc active">
+    <div class="card">
+      <div class="flex jc-sb items-c mb2">
+        <span class="fs tsm">Próximos eventos</span>
+        <span class="txs c-gris" id="upcoming-count">0 eventos</span>
+      </div>
+      <div id="upcoming-list" style="display:flex;flex-direction:column;gap:0">
+        <div class="empty" style="padding:28px 20px"><p>No hay eventos próximos</p></div>
+      </div>
     </div>
-    <div id="upcoming-list" style="display:flex;flex-direction:column;gap:7px">
-      <div class="empty" style="padding:28px 20px"><p>No hay eventos próximos</p></div>
+  </div>
+
+  <!-- Tab: Historial -->
+  <div id="cal-tbc-historial" class="tbc" style="display:none">
+    <div class="card">
+      <div class="flex jc-sb items-c mb2">
+        <span class="fs tsm">Historial completo</span>
+        <span class="txs c-gris" id="historial-count">0 eventos</span>
+      </div>
+      <div class="flex gap2 mb2 flex-wrap">
+        <div class="siwrap" style="flex:1;min-width:160px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="si" placeholder="Buscar evento..." oninput="Calendario._histQ=this.value;Calendario.renderHistorial()">
+        </div>
+        <input type="month" class="fsel" style="max-width:160px" oninput="Calendario._histMes=this.value;Calendario.renderHistorial()" title="Filtrar por mes">
+      </div>
+      <div id="historial-list" style="display:flex;flex-direction:column;gap:0">
+        <div class="empty" style="padding:24px;border:none"><p>Sin eventos registrados</p></div>
+      </div>
     </div>
   </div>
 </section>
@@ -2082,6 +2134,227 @@ const Auth = {
     await App.auth.signOut();
     App.clearSubs();
     UI.showToast('Sesión cerrada', 'inf');
+  }
+};
+
+// =====================================================
+// NAVIGATION
+// =====================================================
+const Nav = {
+  NAV: [
+    { id:'dashboard',  label:'Dashboard',   icon:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' },
+    { id:'gastos',     label:'Gastos',      icon:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>' },
+    { id:'ingresos',   label:'Ingresos',    icon:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
+    { id:'ganado',     label:'Ganado',      icon:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+    { id:'aves',       label:'Aves',        icon:'<path d="M3 10C7 5 13 4 17 7l-2 4-4-2v9H8v-9L3 10z"/><circle cx="18" cy="6" r="2"/>' },
+    { id:'cerdos',     label:'Cerdos',      icon:'<circle cx="12" cy="12" r="9"/><circle cx="9" cy="11" r="1" fill="currentColor"/><circle cx="15" cy="11" r="1" fill="currentColor"/><path d="M9 15.5a3.5 3.5 0 0 0 6 0"/>' },
+    { id:'agricola',   label:'Agrícola',    icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
+    { id:'calendario', label:'Calendario',  icon:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+    { id:'contactos',  label:'Contactos',   icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>' },
+    { id:'inventario', label:'Inventario',   icon:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
+    { id:'reportes',   label:'Reportes',    icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>' },
+    { id:'admin',      label:'Admin',       icon:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',  adminOnly: true },
+    { id:'valentina',  label:'Valentina IA', icon:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>' }
+  ],
+
+  renderNav() {
+    const nav = document.getElementById('sbnav');
+    const lvl = App.profile?.nivel ?? 3;
+    nav.innerHTML = '';
+    Nav.NAV.forEach(item => {
+      if (item.adminOnly && lvl > 0) return;
+      const el = document.createElement('div');
+      el.className = 'ni' + (App.module === item.id ? ' active' : '');
+      el.dataset.mod = item.id;
+      el.onclick = () => { Nav.goTo(item.id); Nav.closeSidebar(); };
+      el.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${item.icon}</svg>${item.label}${item.id==='valentina'?'<span id="val-badge" class="nbadge" style="display:none;background:#dc3545;min-width:20px">0</span>':''}`;
+      nav.appendChild(el);
+    });
+  },
+
+  goTo(id) {
+    if (!App.profile) return;
+    const lvl = App.profile.nivel ?? 3;
+    const item = Nav.NAV.find(n => n.id === id);
+    if (!item) return;
+    if (item.adminOnly && lvl > 0) { UI.showToast('Sin acceso a ese módulo', 'war'); return; }
+    App.clearSubs();
+    // Hide all modules
+    document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+    const sec = document.getElementById('mod-' + id);
+    if (sec) sec.classList.add('active');
+    // Update nav
+    document.querySelectorAll('.ni').forEach(n => n.classList.toggle('active', n.dataset.mod === id));
+    // Update bottom nav
+    const bnMap = { dashboard:'bn-dashboard', gastos:'bn-gastos', ganado:'bn-ganado', calendario:'bn-calendario' };
+    document.querySelectorAll('.bni').forEach(b => b.classList.remove('active'));
+    if (bnMap[id]) document.getElementById(bnMap[id])?.classList.add('active');
+    // Update topbar
+    document.getElementById('tb-mod').textContent = item.label;
+    App.module = id;
+    // Load module data
+    const loaders = { dashboard:Dashboard.load, gastos:Gastos.load, ingresos:Ingresos.load,
+      ganado:Ganado.load, aves:Aves.load, cerdos:Cerdos.load, agricola:Agricola.load,
+      calendario:Calendario.load, contactos:Contactos.load, inventario:Inventario.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
+    if (loaders[id]) loaders[id]();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('show');
+  },
+  closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('show');
+  },
+  toggleUserMenu() {
+    const m = document.getElementById('user-menu');
+    m.classList.toggle('show');
+    if (m.classList.contains('show')) setTimeout(()=>document.addEventListener('click',Nav._closeMenuOut,{once:true}),0);
+  },
+  closeUserMenu() { document.getElementById('user-menu').classList.remove('show'); },
+  _closeMenuOut(e) { if(!document.getElementById('user-menu').contains(e.target)) Nav.closeUserMenu(); },
+  updateUser() {
+    const p = App.profile;
+    if (!p) return;
+    const name = p.nombre || p.email || '?';
+    const ini  = Utils.initials(name);
+    document.getElementById('tav').textContent = ini;
+    document.getElementById('sb-av').textContent = ini;
+    document.getElementById('sb-name').textContent = name;
+    document.getElementById('sb-level').textContent = Utils.levelLabel(p.nivel);
+    document.getElementById('um-name').textContent = name;
+    document.getElementById('um-email').textContent = p.email || '';
+    document.getElementById('dash-date').textContent = new Date().toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  }
+};
+
+// =====================================================
+// DASHBOARD
+// =====================================================
+const Dashboard = {
+  async load() {
+    const now = new Date();
+    const hace30   = new Date(now - 30*24*60*60*1000);
+    const today    = Utils.today();
+    try {
+      const [gSnap, iSnap, ganSnap, lotSnap, tarSnap, evSnap] = await Promise.all([
+        App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
+        App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get(),
+        App.db.collection('ganado').where('estado','==','activo').get(),
+        App.db.collection('agricola').get(),
+        App.db.collection('tareas').where('estado','!=','completada').limit(5).get(),
+        App.db.collection('eventos').orderBy('fecha','desc').limit(500).get()
+      ]);
+      const gastos30   = gSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
+      const ingresos30 = iSnap.docs.filter(d=>{ const x=Utils.parseDate(d.data().fecha); return x&&x>=hace30; });
+      const totalG = gastos30.reduce((a,d)=>a+(d.data().monto||0),0);
+      const totalI = ingresos30.reduce((a,d)=>a+(d.data().monto||0),0);
+      document.getElementById('ds-gastos').textContent  = Utils.fmt$(totalG);
+      document.getElementById('ds-gastos').className    = 'sc-val neg money neg';
+      document.getElementById('ds-ingresos').textContent= Utils.fmt$(totalI);
+      document.getElementById('ds-balance').textContent = Utils.fmt$(totalI - totalG);
+      document.getElementById('ds-balance').className   = `sc-val money ${totalI>=totalG?'pos':'neg'}`;
+      document.getElementById('ds-ganado').textContent  = ganSnap.size;
+      document.getElementById('ds-lotes').textContent   = lotSnap.size;
+
+      // Hoy en la finca
+      Dashboard.renderHoy(evSnap.docs.map(d=>({id:d.id,...d.data()})), today);
+
+      // Last gastos
+      const lastG = gastos30.slice(0,4);
+      const lgEl = document.getElementById('dash-last-gastos');
+      lgEl.innerHTML = lastG.length ? lastG.map(d=>{
+        const g=d.data();
+        return `<div class="flex jc-sb items-c" style="padding:8px 0;border-bottom:1px solid var(--g100)">
+          <div><div class="tsm fb">${Utils.sanitize(g.descripcion||'Sin desc.')}</div>
+          <div class="txs c-gris">${Utils.fmtDate(g.fecha)} · ${Utils.catLabel(g.categoria)}</div></div>
+          <span class="money neg tsm">${Utils.fmt$(g.monto)}</span>
+        </div>`;
+      }).join('') : '<div class="empty" style="padding:20px;border:none"><p>Sin gastos en últimos 30 días</p></div>';
+
+      // Pending tareas
+      const tarEl = document.getElementById('dash-tareas');
+      tarEl.innerHTML = tarSnap.docs.length ? tarSnap.docs.map(d=>{
+        const t=d.data();
+        return `<div class="tarea ${t.estado||'pendiente'}" style="margin-bottom:6px">
+          <div class="tarea-chk">${t.estado==='completada'?'✓':''}</div>
+          <div class="tarea-info">
+            <div class="tarea-title">${Utils.sanitize(t.titulo||'Tarea')}</div>
+            <div class="tarea-meta">${Utils.fmtDate(t.fechaProgramada)} · ${Utils.tareaLabel(t.tipo)}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty" style="padding:20px;border:none"><p>Sin tareas pendientes</p></div>';
+
+      // Charts
+      await Dashboard.renderCharts();
+    } catch(e) { console.error('Dashboard load:', e); }
+  },
+
+  renderHoy(eventos, today) {
+    const el = document.getElementById('dash-hoy-list');
+    if (!el) return;
+    const CAT_COLORS = {visita:'#084298,#CFE2FF',vacunacion:'#0F5132,#D1E7DD',pago:'#842029,#F8D7DA',cosecha:'#664D03,#FFF3CD',reunion:'#5A1F8A,#E8D5F5',otro:'#41464B,#E2E3E5'};
+    const evHoy = eventos.filter(e => {
+      if (e.tipoFecha === 'rango') return today >= (e.fechaInicio||e.fecha) && today <= (e.fechaFin||e.fechaInicio||e.fecha);
+      if (e.tipoFecha === 'recurrente') return (e.fechaInicio||e.fecha) <= today;
+      return (e.fecha||e.fechaInicio) === today;
+    });
+    if (!evHoy.length) {
+      el.innerHTML = '<div class="empty" style="padding:16px;border:none"><p>Sin actividades programadas para hoy</p></div>';
+      return;
+    }
+    el.innerHTML = evHoy.map(e => {
+      const p = CAT_COLORS[e.tipo||'otro'] || CAT_COLORS.otro;
+      const [text, bg] = p.split(',');
+      let extra = '';
+      if (e.tipoFecha === 'rango') {
+        const d1=new Date(e.fechaInicio||e.fecha),d2=new Date(e.fechaFin),dt=new Date(today);
+        const totalDias=Math.round((d2-d1)/86400000)+1,diaActual=Math.round((dt-d1)/86400000)+1;
+        extra = ` · Día ${diaActual} de ${totalDias}`;
+      }
+      const tipoLabel = {unica:'Fecha única',rango:'En curso',recurrente:'Recurrente'}[e.tipoFecha||'unica'] || 'Evento';
+      const badge = e.tipoFecha==='rango'?'En curso':e.tipoFecha==='recurrente'?'Recurrente':'Hoy';
+      return `<div class="hoy-ev-item">
+        <div class="hoy-ev-bar" style="background:${text}"></div>
+        <div style="flex:1">
+          <div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
+          <div class="txs c-gris">${tipoLabel}${extra} · ${Utils.eventoLabel(e.tipo)}</div>
+        </div>
+        <span class="badge txs" style="background:${bg};color:${text}">${badge}</span>
+      </div>`;
+    }).join('');
+  },
+
+  async renderCharts() {
+    try {
+      const now = new Date();
+      const months = Array.from({length:6},(_,i)=>{
+        const d = new Date(now.getFullYear(), now.getMonth()-5+i, 1);
+        return { label: Utils.monthShort(d.getMonth()), year: d.getFullYear(), month: d.getMonth()+1, key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` };
+      });
+      const ingData = Array(6).fill(0), gasData = Array(6).fill(0), catMap = {};
+      const [gSnap, iSnap] = await Promise.all([
+        App.db.collection('gastos').orderBy('fecha','desc').limit(500).get(),
+        App.db.collection('ingresos').orderBy('fecha','desc').limit(500).get()
+      ]);
+      gSnap.docs.forEach(d=>{ const g=d.data(); const x=Utils.parseDate(g.fecha); if(!x)return; const k=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`; const i=months.findIndex(m=>m.key===k); if(i>=0)gasData[i]+=(g.monto||0); catMap[g.categoria]=(catMap[g.categoria]||0)+(g.monto||0); });
+      iSnap.docs.forEach(d=>{ const g=d.data(); const x=Utils.parseDate(g.fecha); if(!x)return; const k=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}`; const i=months.findIndex(m=>m.key===k); if(i>=0)ingData[i]+=(g.monto||0); });
+
+      Charts.bar(document.getElementById('chart-ig'), months.map(m=>m.label), [
+        { label:'Ingresos', data:ingData, color:'#1B4332' },
+        { label:'Gastos',   data:gasData, color:'#DC3545' }
+      ]);
+
+      const catEntries = Object.entries(catMap).filter(([,v])=>v>0);
+      if (catEntries.length) {
+        Charts.donut(document.getElementById('chart-gastos-cat'),
+          catEntries.map(([k])=>Utils.catLabel(k)),
+          catEntries.map(([,v])=>v),
+          Charts.COLORS);
+      }
+    } catch(e) { console.error('Dashboard charts:', e); }
   }
 };
 
@@ -3287,9 +3560,20 @@ const Agricola = {
 // =====================================================
 const Calendario = {
   _year:new Date().getFullYear(), _month:new Date().getMonth(), _eventos:[],
+  _histQ:'', _histMes:'',
+
+  _CAT_COLORS:{visita:'#084298,#CFE2FF',vacunacion:'#0F5132,#D1E7DD',pago:'#842029,#F8D7DA',cosecha:'#664D03,#FFF3CD',reunion:'#5A1F8A,#E8D5F5',otro:'#41464B,#E2E3E5'},
+  _COLOR_BG:{rojo:'#FFEEF0',naranja:'#FFE8D0',azul:'#CFE2FF',verde:'#D1E7DD',morado:'#E8D5F5',gris:'#E2E3E5',dorado:'#FFF3CD',celeste:'#D0E8F8'},
+  _COLOR_TXT:{rojo:'#842029',naranja:'#7C3005',azul:'#084298',verde:'#0F5132',morado:'#5A1F8A',gris:'#41464B',dorado:'#664D03',celeste:'#0A4B6E'},
+
+  _evColor(e){
+    if(e.color&&Calendario._COLOR_BG[e.color])return{bg:Calendario._COLOR_BG[e.color],text:Calendario._COLOR_TXT[e.color]};
+    const p=Calendario._CAT_COLORS[e.tipo||'otro']||Calendario._CAT_COLORS.otro;
+    const[text,bg]=p.split(',');return{bg,text};
+  },
 
   load(){
-    const unsub=App.db.collection('eventos').orderBy('fecha').limit(300)
+    const unsub=App.db.collection('eventos').orderBy('fecha','desc').limit(1000)
       .onSnapshot(s=>{Calendario._eventos=s.docs.map(d=>({id:d.id,...d.data()}));Calendario.render();Calendario.renderUpcoming();},e=>console.error(e));
     App._subs.push(unsub);
     Calendario.render();
@@ -3305,12 +3589,17 @@ const Calendario = {
       const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const dayEvts=Calendario._eventos.filter(e=>{
         if(e.tipoFecha==='rango')return dateStr>=(e.fechaInicio||e.fecha)&&dateStr<=(e.fechaFin||e.fechaInicio||e.fecha);
+        if(e.tipoFecha==='recurrente')return dateStr>=(e.fechaInicio||e.fecha);
         return(e.fecha||e.fechaInicio)===dateStr;
       });
       const isToday=dateStr===today;
       html+=`<div class="cday${isToday?' today':''}" onclick="Calendario.openEventoForm('${dateStr}')">
         <div class="cdnum">${isToday?`<div style="display:flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:50%;background:var(--verde);color:white;font-size:.78rem;font-weight:600">${d}</div>`:d}</div>
-        <div class="cevts">${dayEvts.slice(0,3).map(e=>`<div class="cevt ${e.tipo||'otro'}" onclick="event.stopPropagation();Calendario.openEventoForm('${e.fecha||e.fechaInicio}','${e.id}')" title="${Utils.sanitize(e.titulo)}">${Utils.sanitize(e.titulo)}${e.tipoFecha==='recurrente'?' 🔄':e.tipoFecha==='rango'?' ↔':''}</div>`).join('')}${dayEvts.length>3?`<div class="txs c-gris">+${dayEvts.length-3} más</div>`:''}</div>
+        <div class="cevts">${dayEvts.slice(0,3).map(e=>{
+          const c=Calendario._evColor(e);
+          const enCurso=isToday&&e.tipoFecha==='rango'&&dateStr>=(e.fechaInicio||e.fecha)&&dateStr<=(e.fechaFin||e.fechaInicio||e.fecha);
+          return`<div class="cevt-item${enCurso?' en-curso':''}" style="background:${c.bg};color:${c.text}" onclick="event.stopPropagation();Calendario.verEvento('${e.id}')" title="${Utils.sanitize(e.titulo)}">${Utils.sanitize(e.titulo)}${e.tipoFecha==='recurrente'?' ↻':e.tipoFecha==='rango'?' ↔':''}</div>`;
+        }).join('')}${dayEvts.length>3?`<div class="txs c-gris">+${dayEvts.length-3} más</div>`:''}</div>
       </div>`;
     }
     const rem=42-first-days;for(let d=1;d<=rem;d++)html+=`<div class="cday other"><div class="cdnum">${d}</div></div>`;
@@ -3318,33 +3607,111 @@ const Calendario = {
   },
 
   _fmtEvFecha(e){
-    if(e.tipoFecha==='rango')return`${Utils.fmtDate(e.fechaInicio)} al ${Utils.fmtDate(e.fechaFin)}`;
-    if(e.tipoFecha==='recurrente')return`${Utils.fmtDate(e.fechaInicio)} <span class="badge b-azul" style="font-size:.7rem;vertical-align:middle">${e.recurrencia}</span>`;
+    if(e.tipoFecha==='rango'){
+      const today=Utils.today();
+      if(today>=(e.fechaInicio||e.fecha)&&today<=(e.fechaFin||e.fechaInicio)){
+        const d1=new Date(e.fechaInicio||e.fecha),d2=new Date(e.fechaFin),dt=new Date(today);
+        const totalDias=Math.round((d2-d1)/86400000)+1,diaActual=Math.round((dt-d1)/86400000)+1;
+        return`${Utils.fmtDate(e.fechaInicio)} al ${Utils.fmtDate(e.fechaFin)} <span class="badge" style="background:#D1E7DD;color:#0F5132;font-size:.68rem">En curso · día ${diaActual} de ${totalDias}</span>`;
+      }
+      return`${Utils.fmtDate(e.fechaInicio)} al ${Utils.fmtDate(e.fechaFin)}`;
+    }
+    if(e.tipoFecha==='recurrente')return`${Utils.fmtDate(e.fechaInicio||e.fecha)} <span class="badge b-azul" style="font-size:.7rem;vertical-align:middle">${e.recurrencia}</span>`;
     return`${Utils.fmtDate(e.fecha||e.fechaInicio)}${e.hora?' '+e.hora:''}`;
   },
 
   _evEditKey(e){return e.fecha||e.fechaInicio||Utils.today();},
 
+  verEvento(id){
+    const e=Calendario._eventos.find(x=>x.id===id);if(!e)return;
+    const c=Calendario._evColor(e);const today=Utils.today();
+    let estadoBadge='';
+    if(e.tipoFecha==='rango'){
+      if(today>=(e.fechaInicio||e.fecha)&&today<=(e.fechaFin||e.fechaInicio)){
+        const d1=new Date(e.fechaInicio||e.fecha),d2=new Date(e.fechaFin),dt=new Date(today);
+        const totalDias=Math.round((d2-d1)/86400000)+1,diaActual=Math.round((dt-d1)/86400000)+1;
+        estadoBadge=`<span class="badge" style="background:#D1E7DD;color:#0F5132">En curso · día ${diaActual} de ${totalDias}</span> `;
+      } else if(today>(e.fechaFin||'')) estadoBadge=`<span class="badge b-gris">Finalizado</span> `;
+      else estadoBadge=`<span class="badge b-azul">Próximo</span> `;
+    } else if(e.tipoFecha==='recurrente') estadoBadge=`<span class="badge b-azul">Recurrente</span> `;
+    const histHtml=e.historialCambios?.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--g100)"><div class="txs c-gris mb1">Modificado:</div>${e.historialCambios.slice(-4).reverse().map(h=>`<div class="txs mb1"><span class="c-gris">${h.fecha||'—'}</span> · <b>${h.campo}</b>: ${Utils.sanitize(String(h.valorAnterior||'—'))} → ${Utils.sanitize(String(h.valorNuevo||'—'))}</div>`).join('')}</div>`:'';
+    const editKey=Calendario._evEditKey(e);
+    UI.showModal({title:Utils.sanitize(e.titulo),hideSave:true,body:`
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div style="width:5px;border-radius:3px;background:${c.text};flex-shrink:0;min-height:44px"></div>
+        <div style="flex:1">
+          <div class="flex gap1 mb1 flex-wrap">${estadoBadge}<span class="badge" style="background:${c.bg};color:${c.text}">${Utils.eventoLabel(e.tipo)}</span></div>
+          <div class="tsm mb1">${Calendario._fmtEvFecha(e)}</div>
+          ${e.descripcion?`<div class="txs c-gris mt1">${Utils.sanitize(e.descripcion)}</div>`:''}
+          ${histHtml}
+        </div>
+      </div>
+      <div class="flex gap2 mt2">
+        <button class="btn btn-dor btn-sm" onclick="UI.closeModal();Calendario.openEventoForm('${editKey}','${id}')">Editar</button>
+        ${App.canDelete()?`<button class="btn btn-sm" style="background:#fff5f5;color:#dc3545;border:1px solid #f5c2c7" onclick="UI.closeModal();Calendario.del('${id}')">Eliminar</button>`:''}
+      </div>`});
+  },
+
   renderUpcoming(){
     const today=Utils.today();
     const up=Calendario._eventos.filter(e=>{
       if(e.tipoFecha==='recurrente')return(e.fechaInicio||e.fecha)<=today;
-      return(e.fechaInicio||e.fecha||'')>=today;
-    }).sort((a,b)=>(a.fechaInicio||a.fecha||'').localeCompare(b.fechaInicio||b.fecha||'')).slice(0,10);
-    const el=document.getElementById('upcoming-list');
+      const fin=e.fechaFin||e.fechaInicio||e.fecha||'';
+      return fin>=today;
+    }).sort((a,b)=>(a.fechaInicio||a.fecha||'').localeCompare(b.fechaInicio||b.fecha||'')).slice(0,15);
+    const el=document.getElementById('upcoming-list');if(!el)return;
     document.getElementById('upcoming-count').textContent=up.length+' evento'+(up.length!==1?'s':'');
     if(!up.length){el.innerHTML=`<div class="empty" style="padding:24px;border:none"><p>No hay eventos próximos</p></div>`;return;}
-    el.innerHTML=up.map(e=>`<div class="flex jc-sb items-c" style="padding:9px 0;border-bottom:1px solid var(--g100)">
-      <div class="flex gap2 items-c">
-        <span class="cevt ${e.tipo||'otro'}" style="min-width:10px">&nbsp;</span>
-        <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
-        <div class="txs c-gris">${Calendario._fmtEvFecha(e)} · ${Utils.eventoLabel(e.tipo)}</div></div>
-      </div>
-      <div class="flex gap1">
-        <button class="bico" onclick="Calendario.openEventoForm('${Calendario._evEditKey(e)}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        ${App.canDelete()?`<button class="bico dan" onclick="Calendario.del('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
-      </div>
-    </div>`).join('');
+    el.innerHTML=up.map(e=>{
+      const c=Calendario._evColor(e);
+      return`<div class="flex jc-sb items-c" style="padding:9px 0;border-bottom:1px solid var(--g100)">
+        <div class="flex gap2 items-c">
+          <div style="width:4px;height:36px;border-radius:2px;background:${c.text};flex-shrink:0"></div>
+          <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
+          <div class="txs c-gris">${Calendario._fmtEvFecha(e)} · ${Utils.eventoLabel(e.tipo)}</div></div>
+        </div>
+        <div class="flex gap1">
+          <button class="bico" onclick="Calendario.verEvento('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+          <button class="bico" onclick="Calendario.openEventoForm('${Calendario._evEditKey(e)}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          ${App.canDelete()?`<button class="bico dan" onclick="Calendario.del('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  renderHistorial(){
+    const el=document.getElementById('historial-list');if(!el)return;
+    let list=[...Calendario._eventos];
+    if(Calendario._histQ){const q=Calendario._histQ.toLowerCase();list=list.filter(e=>(e.titulo||'').toLowerCase().includes(q));}
+    if(Calendario._histMes)list=list.filter(e=>(e.fechaInicio||e.fecha||'').startsWith(Calendario._histMes));
+    list.sort((a,b)=>(b.fechaInicio||b.fecha||'').localeCompare(a.fechaInicio||a.fecha||''));
+    document.getElementById('historial-count').textContent=list.length+' evento'+(list.length!==1?'s':'');
+    const today=Utils.today();
+    if(!list.length){el.innerHTML=`<div class="empty" style="padding:24px;border:none"><p>Sin eventos que coincidan</p></div>`;return;}
+    el.innerHTML=list.map(e=>{
+      const isPast=(e.fechaFin||e.fechaInicio||e.fecha||'')<today&&e.tipoFecha!=='recurrente';
+      const c=Calendario._evColor(e);
+      return`<div class="flex jc-sb items-c" style="padding:9px 0;border-bottom:1px solid var(--g100);opacity:${isPast?'.55':'1'}">
+        <div class="flex gap2 items-c">
+          <div style="width:4px;height:36px;border-radius:2px;background:${c.text};flex-shrink:0"></div>
+          <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
+          <div class="txs c-gris">${Calendario._fmtEvFecha(e)} · ${Utils.eventoLabel(e.tipo)}</div></div>
+        </div>
+        <div class="flex gap1">
+          <button class="bico" onclick="Calendario.verEvento('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+          <button class="bico" onclick="Calendario.openEventoForm('${Calendario._evEditKey(e)}','${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          ${App.canDelete()?`<button class="bico dan" onclick="Calendario.del('${e.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  switchTab(tab,btn){
+    document.querySelectorAll('#mod-calendario .tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('cal-tbc-upcoming').style.display=tab==='upcoming'?'':'none';
+    document.getElementById('cal-tbc-historial').style.display=tab==='historial'?'':'none';
+    if(tab==='historial')Calendario.renderHistorial();
   },
 
   prevMonth(){if(Calendario._month===0){Calendario._month=11;Calendario._year--;}else Calendario._month--;Calendario.render();},
@@ -3361,6 +3728,8 @@ const Calendario = {
     if(!App.canWrite()){UI.showToast('Sin permiso','war');return;}
     const e=id?Calendario._eventos.find(x=>x.id===id):null;
     const tf=e?.tipoFecha||'unica';
+    const colorOpts=['rojo','naranja','azul','verde','morado','gris','dorado','celeste'];
+    const colorLabels={rojo:'Rojo (Sanidad)',naranja:'Naranja (Alimentación)',azul:'Azul (General)',verde:'Verde (Producción)',morado:'Morado (Admin.)',gris:'Gris (Otro)',dorado:'Dorado (Cosecha)',celeste:'Celeste (Visita)'};
     UI.showModal({title:e?'Editar Evento':'Nuevo Evento',body:`
       <div class="fg"><label class="flbl">Título *</label><input type="text" id="ef-tit" class="fc" value="${Utils.sanitize(e?.titulo||'')}" required maxlength="120"></div>
       <div class="fg"><label class="flbl">Tipo de fecha</label>
@@ -3388,8 +3757,15 @@ const Calendario = {
             <select id="ef-recurrencia" class="fc">${['Diario','Semanal','Mensual','Trimestral','Semestral','Anual'].map(f=>`<option value="${f}"${e?.recurrencia===f?' selected':''}>${f}</option>`).join('')}</select></div>
         </div>
       </div>
-      <div class="fg"><label class="flbl">Tipo</label>
-        <select id="ef-tipo" class="fc">${['visita','vacunacion','pago','cosecha','reunion','otro'].map(t=>`<option value="${t}"${e?.tipo===t?' selected':''}>${Utils.eventoLabel(t)}</option>`).join('')}</select></div>
+      <div class="fgrid fg2">
+        <div class="fg"><label class="flbl">Tipo</label>
+          <select id="ef-tipo" class="fc">${['visita','vacunacion','pago','cosecha','reunion','otro'].map(t=>`<option value="${t}"${e?.tipo===t?' selected':''}>${Utils.eventoLabel(t)}</option>`).join('')}</select></div>
+        <div class="fg"><label class="flbl">Color</label>
+          <select id="ef-color" class="fc">
+            <option value="">Auto (por tipo)</option>
+            ${colorOpts.map(c=>`<option value="${c}"${e?.color===c?' selected':''}>${colorLabels[c]}</option>`).join('')}
+          </select></div>
+      </div>
       <div class="fg"><label class="flbl">Descripción</label><textarea id="ef-desc" class="fc" rows="2">${Utils.sanitize(e?.descripcion||'')}</textarea></div>`,
       onSave:()=>Calendario.saveEvento(id)});
   },
@@ -3409,13 +3785,24 @@ const Calendario = {
       fechaInicio=document.getElementById('ef-fecha-rec').value;recurrencia=document.getElementById('ef-recurrencia').value;fecha=fechaInicio;
       if(!fechaInicio){UI.showToast('La fecha de inicio es obligatoria','war');return false;}
     }
-    const data={titulo:tit,fecha,fechaInicio,fechaFin,recurrencia,tipoFecha:tf,
+    const color=document.getElementById('ef-color').value||null;
+    const data={titulo:tit,fecha,fechaInicio,fechaFin,recurrencia,tipoFecha:tf,color,
       hora:(tf==='unica'?document.getElementById('ef-hora').value:null)||null,
       tipo:document.getElementById('ef-tipo').value,
       descripcion:document.getElementById('ef-desc').value.trim(),
       uid:App.user.uid,modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
-    if(id){await App.db.collection('eventos').doc(id).update(data);UI.showToast('Evento actualizado','suc');}
-    else{data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();await App.db.collection('eventos').add(data);UI.showToast('Evento registrado','suc');}
+    if(id){
+      const old=Calendario._eventos.find(x=>x.id===id);
+      const cambios=[];
+      [['fecha','Fecha'],['fechaInicio','F. inicio'],['fechaFin','F. fin'],['recurrencia','Frecuencia'],['tipoFecha','Tipo']].forEach(([k,lbl])=>{
+        if(old&&old[k]!==data[k]&&(old[k]||data[k]))cambios.push({campo:lbl,valorAnterior:old[k]||null,valorNuevo:data[k]||null,fecha:Utils.today(),usuario:App.profile?.nombre||App.user?.email||'?'});
+      });
+      if(cambios.length)data.historialCambios=firebase.firestore.FieldValue.arrayUnion(...cambios);
+      await App.db.collection('eventos').doc(id).update(data);UI.showToast('Evento actualizado','suc');
+    } else {
+      data.creadoEn=firebase.firestore.FieldValue.serverTimestamp();
+      await App.db.collection('eventos').add(data);UI.showToast('Evento registrado','suc');
+    }
   },
   del(id){UI.confirm('¿Eliminar este evento?',async()=>{await App.db.collection('eventos').doc(id).delete();UI.showToast('Evento eliminado','suc');});}
 };
