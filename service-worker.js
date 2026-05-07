@@ -1,9 +1,9 @@
 // ============================================================
 // SERVICE WORKER - Finca SantaFe PWA
 // ============================================================
-const CACHE_NAME = 'finca-santafe-v1.0.0';
-const STATIC_CACHE = 'finca-santafe-static-v1';
-const DYNAMIC_CACHE = 'finca-santafe-dynamic-v1';
+const CACHE_NAME = 'finca-santafe-v1.0.2';
+const STATIC_CACHE = 'finca-santafe-static-v2';
+const DYNAMIC_CACHE = 'finca-santafe-dynamic-v2';
 
 const STATIC_ASSETS = [
   '/',
