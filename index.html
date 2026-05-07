@@ -1765,6 +1765,16 @@ const App = {
       App.storage = firebase.storage();
       App.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
       App.auth.onAuthStateChanged(Auth.onAuthChange);
+      // Safety: force-hide loading screen if Firebase auth never fires
+      setTimeout(() => {
+        const ls = document.getElementById('loading-screen');
+        if (ls && getComputedStyle(ls).display !== 'none' && !ls.classList.contains('fade-out')) {
+          console.warn('Auth timeout: forcing loading screen off');
+          ls.classList.add('fade-out');
+          setTimeout(() => { ls.style.display = 'none'; }, 420);
+          document.getElementById('login-screen').classList.remove('hidden');
+        }
+      }, 12000);
       window.addEventListener('beforeinstallprompt', e => {
         e.preventDefault(); App._deferredInstall = e;
         setTimeout(() => document.getElementById('pwa-prompt').classList.add('show'), 4000);
@@ -2078,25 +2088,29 @@ const Auth = {
 
   async onAuthChange(user) {
     const ls = document.getElementById('loading-screen');
-    if (user) {
-      App.user = user;
-      await Auth.loadProfile(user.uid);
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('app-screen').classList.remove('hidden');
-      Nav.renderNav();
-      Nav.updateUser();
-      Nav.goTo('dashboard');
-      Valentina.startBadge();
-      // Update last access
-      App.db.collection('usuarios').doc(user.uid).update({ ultimoAcceso: firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{});
-    } else {
-      App.user = null; App.profile = null;
-      App.clearSubs();
-      document.getElementById('app-screen').classList.add('hidden');
-      document.getElementById('login-screen').classList.remove('hidden');
+    try {
+      if (user) {
+        App.user = user;
+        await Auth.loadProfile(user.uid);
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.remove('hidden');
+        Nav.renderNav();
+        Nav.updateUser();
+        Nav.goTo('dashboard');
+        Valentina.startBadge();
+        App.db.collection('usuarios').doc(user.uid).update({ ultimoAcceso: firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{});
+      } else {
+        App.user = null; App.profile = null;
+        App.clearSubs();
+        document.getElementById('app-screen').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+      }
+    } catch(e) {
+      console.error('Auth state error:', e);
+    } finally {
+      ls.classList.add('fade-out');
+      setTimeout(() => ls.style.display='none', 420);
     }
-    ls.classList.add('fade-out');
-    setTimeout(() => ls.style.display='none', 420);
   },
 
   async loadProfile(uid) {
