@@ -2300,7 +2300,8 @@ const Dashboard = {
       // Recurring events
       const today = Utils.today();
       const recSnap = await App.db.collection('eventos').where('tipoFecha','==','recurrente').get();
-      const recEvts = recSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>(e.fechaInicio||e.fecha)<=today);
+      const unicaSnap = await App.db.collection('eventos').where('tipoFecha','==','unica').where('fechaInicio','==',today).get();
+      const recEvts = [...recSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>(e.fechaInicio||e.fecha)<=today), ...unicaSnap.docs.map(d=>({id:d.id,...d.data()}))];
       const recWrap = document.getElementById('dash-recurrentes-wrap');
       const recEl = document.getElementById('dash-recurrentes');
       if(recEvts.length){
