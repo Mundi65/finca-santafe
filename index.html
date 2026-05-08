@@ -475,7 +475,7 @@ textarea.fc{resize:vertical;min-height:76px}
 .hoy-ev-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--g100)}
 .hoy-ev-item:last-child{border-bottom:none}
 .hoy-ev-bar{width:4px;border-radius:2px;min-height:38px;flex-shrink:0}
-@media(max-width:560px){.cday{min-height:46px;padding:3px}.cevts{display:none}}
+@media(max-width:560px){.cday{min-height:46px;padding:3px}.cevts{display:flex;flex-direction:column;gap:1px;margin-top:2px}.cevt-item{font-size:0;padding:0;height:4px;border-radius:2px;min-width:100%}}
 
 /* ===================================================
    LOTES (AGRI)
@@ -2301,7 +2301,9 @@ const Dashboard = {
       const today = Utils.today();
       const recSnap = await App.db.collection('eventos').where('tipoFecha','==','recurrente').get();
       const unicaSnap = await App.db.collection('eventos').where('tipoFecha','==','unica').where('fechaInicio','==',today).get();
-      const recEvts = [...recSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>(e.fechaInicio||e.fecha)<=today), ...unicaSnap.docs.map(d=>({id:d.id,...d.data()}))];
+      const rangoSnap = await App.db.collection('eventos').where('tipoFecha','==','rango').get();
+      const rangoEvts = rangoSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>(e.fechaInicio||e.fecha)<=today&&(e.fechaFin||e.fechaInicio||e.fecha)>=today);
+      const recEvts = [...recSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>(e.fechaInicio||e.fecha)<=today), ...unicaSnap.docs.map(d=>({id:d.id,...d.data()})), ...rangoEvts];
       const recWrap = document.getElementById('dash-recurrentes-wrap');
       const recEl = document.getElementById('dash-recurrentes');
       if(recEvts.length){
