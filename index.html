@@ -471,6 +471,12 @@ textarea.fc{resize:vertical;min-height:76px}
 .cevt.otro{background:var(--g200);color:var(--g700)}
 .cevt-item{font-size:.62rem;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;cursor:pointer;margin-bottom:2px}
 @keyframes pulse-ev{0%,100%{box-shadow:0 0 0 0 rgba(15,81,50,.35)}70%{box-shadow:0 0 0 5px rgba(15,81,50,0)}}
+
+.perfil-tab.active{background:var(--verde);color:white}
+.perfil-tab{background:var(--g100);color:var(--g700)}
+.check-lbl{display:flex;align-items:center;gap:6px;font-size:.85rem;background:var(--g50);padding:6px 10px;border-radius:6px;cursor:pointer}
+.check-lbl input{accent-color:var(--verde)}
+
 .cevt-item.en-curso{animation:pulse-ev 1.8s infinite;border:1px solid rgba(15,81,50,.4)}
 .hoy-ev-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--g100)}
 .hoy-ev-item:last-child{border-bottom:none}
@@ -1589,6 +1595,360 @@ textarea.fc{resize:vertical;min-height:76px}
 <!-- ================================================
      MÓDULO: ADMIN
      ================================================ -->
+<!-- ================================================
+     PERFIL DE LA FINCA
+     ================================================ -->
+<section id="mod-perfil" class="module">
+  <div class="mhd">
+    <div class="mhd-l">
+      <div class="mhd-icon" style="background:#EAF2FF">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A56DB" stroke-width="2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+      </div>
+      <h1>Perfil de la Finca</h1>
+    </div>
+  </div>
+
+  <div class="fgrid fg2" style="gap:16px">
+
+    <!-- 1. INFORMACIÓN GENERAL -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-hdr"><strong>Información General</strong></div>
+      <div class="fgrid fg2 p2">
+        <div class="fg"><label class="flbl">Nombre de la finca</label><input id="pf-nombre" class="fc" type="text" placeholder="Finca SantaFe"></div>
+        <div class="fg"><label class="flbl">Propietario(s)</label><input id="pf-propietario" class="fc" type="text" placeholder="Nombre del propietario"></div>
+        <div class="fg"><label class="flbl">Empresa</label><input id="pf-empresa" class="fc" type="text" placeholder="DISTUCAR Cía. Ltda."></div>
+        <div class="fg"><label class="flbl">RUC / Cédula</label><input id="pf-ruc" class="fc" type="text" placeholder="1234567890001"></div>
+        <div class="fg"><label class="flbl">Teléfono</label><input id="pf-telefono" class="fc" type="tel" placeholder="+593..."></div>
+        <div class="fg"><label class="flbl">Correo</label><input id="pf-correo" class="fc" type="email" placeholder="info@finca.com"></div>
+        <div class="fg"><label class="flbl">Fecha de fundación</label><input id="pf-fundacion" class="fc" type="date"></div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Descripción general</label><textarea id="pf-descripcion" class="fc" rows="2" placeholder="Breve descripción de la finca..."></textarea></div>
+      </div>
+    </div>
+
+    <!-- 2. UBICACIÓN -->
+    <div class="card">
+      <div class="card-hdr"><strong>Ubicación</strong></div>
+      <div class="fgrid fg2 p2">
+        <div class="fg"><label class="flbl">Provincia</label><input id="pf-provincia" class="fc" type="text" placeholder="Pichincha"></div>
+        <div class="fg"><label class="flbl">Cantón</label><input id="pf-canton" class="fc" type="text" placeholder="Quito"></div>
+        <div class="fg"><label class="flbl">Parroquia / Sector</label><input id="pf-sector" class="fc" type="text" placeholder="Sector"></div>
+        <div class="fg"><label class="flbl">Dirección / Referencia</label><input id="pf-referencia" class="fc" type="text" placeholder="Referencia de acceso"></div>
+        <div class="fg"><label class="flbl">Latitud</label><input id="pf-lat" class="fc" type="number" step="any" placeholder="-0.123456"></div>
+        <div class="fg"><label class="flbl">Longitud</label><input id="pf-lng" class="fc" type="number" step="any" placeholder="-78.123456"></div>
+        <div class="fg"><label class="flbl">Altitud (msnm)</label><input id="pf-altitud" class="fc" type="number" placeholder="2400"></div>
+        <div class="fg" style="display:flex;align-items:flex-end">
+          <button type="button" class="btn btn-ghost" style="width:100%" onclick="PerfilFinca.getGPS()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            Usar mi ubicación GPS
+          </button>
+        </div>
+        <div class="fg" style="grid-column:1/-1" id="pf-map-wrap"></div>
+      </div>
+    </div>
+
+    <!-- 3. CARACTERÍSTICAS FÍSICAS -->
+    <div class="card">
+      <div class="card-hdr"><strong>Características Físicas</strong></div>
+      <div class="fgrid fg2 p2">
+        <div class="fg"><label class="flbl">Área total (ha)</label><input id="pf-area-total" class="fc" type="number" step="0.01" placeholder="45.5"></div>
+        <div class="fg"><label class="flbl">Área cultivable (ha)</label><input id="pf-area-cultiv" class="fc" type="number" step="0.01" placeholder="30"></div>
+        <div class="fg"><label class="flbl">Área construcciones (m²)</label><input id="pf-area-const" class="fc" type="number" placeholder="800"></div>
+        <div class="fg"><label class="flbl">Topografía</label>
+          <select id="pf-topografia" class="fc"><option value="">Seleccionar</option><option>Plana</option><option>Ondulada</option><option>Inclinada</option><option>Mixta</option></select></div>
+        <div class="fg"><label class="flbl">Tipo de suelo</label>
+          <select id="pf-suelo" class="fc"><option value="">Seleccionar</option><option>Arcilloso</option><option>Arenoso</option><option>Franco</option><option>Limoso</option><option>Mixto</option></select></div>
+        <div class="fg"><label class="flbl">Caudal aproximado</label><input id="pf-caudal" class="fc" type="text" placeholder="ej: 2 L/s"></div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Fuentes de agua</label>
+          <div class="flex flex-wrap gap1 mt1">
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-agua-rio" value="Río"> Río</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-agua-pozo" value="Pozo"> Pozo</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-agua-canal" value="Canal de riego"> Canal de riego</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-agua-lluvia" value="Lluvia"> Lluvia</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-agua-potable" value="Agua potable"> Agua potable</label>
+          </div>
+        </div>
+        <div class="fg"><label class="flbl">Nitrógeno - N (ppm)</label><input id="pf-nitrogeno" class="fc" type="number" placeholder=""></div>
+        <div class="fg"><label class="flbl">Fósforo - P (ppm)</label><input id="pf-fosforo" class="fc" type="number" placeholder=""></div>
+        <div class="fg"><label class="flbl">Potasio - K (ppm)</label><input id="pf-potasio" class="fc" type="number" placeholder=""></div>
+      </div>
+    </div>
+
+    <!-- 4. CLIMA Y CONDICIONES -->
+    <div class="card">
+      <div class="card-hdr"><strong>Clima y Condiciones</strong></div>
+      <div class="fgrid fg2 p2">
+        <div class="fg"><label class="flbl">Tipo de clima</label>
+          <select id="pf-clima" class="fc"><option value="">Seleccionar</option><option>Tropical húmedo</option><option>Tropical seco</option><option>Subtropical</option><option>Templado</option><option>Otro</option></select></div>
+        <div class="fg"><label class="flbl">Heladas</label>
+          <select id="pf-heladas" class="fc"><option value="">Seleccionar</option><option>Sí</option><option>No</option><option>Ocasional</option></select></div>
+        <div class="fg"><label class="flbl">Temp. mínima (°C)</label><input id="pf-temp-min" class="fc" type="number" step="0.5" placeholder="12"></div>
+        <div class="fg"><label class="flbl">Temp. máxima (°C)</label><input id="pf-temp-max" class="fc" type="number" step="0.5" placeholder="25"></div>
+        <div class="fg"><label class="flbl">Humedad relativa (%)</label><input id="pf-humedad" class="fc" type="number" min="0" max="100" placeholder="75"></div>
+        <div class="fg"><label class="flbl">Precipitación anual (mm)</label><input id="pf-precip" class="fc" type="number" placeholder="1200"></div>
+        <div class="fg"><label class="flbl">Vientos predominantes</label><input id="pf-vientos" class="fc" type="text" placeholder="Norte, suaves"></div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Meses de lluvia</label>
+          <div class="flex flex-wrap gap1 mt1" id="pf-meses-lluvia">
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="1"> Ene</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="2"> Feb</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="3"> Mar</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="4"> Abr</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="5"> May</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="6"> Jun</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="7"> Jul</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="8"> Ago</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="9"> Sep</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="10"> Oct</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="11"> Nov</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="12"> Dic</label>
+          </div>
+        </div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Meses secos</label>
+          <div class="flex flex-wrap gap1 mt1" id="pf-meses-secos">
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="1"> Ene</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="2"> Feb</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="3"> Mar</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="4"> Abr</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="5"> May</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="6"> Jun</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="7"> Jul</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="8"> Ago</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="9"> Sep</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="10"> Oct</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="11"> Nov</label>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" value="12"> Dic</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. INFRAESTRUCTURA -->
+    <div class="card">
+      <div class="card-hdr"><strong>Infraestructura</strong></div>
+      <div class="fgrid fg2 p2">
+        <div class="fg"><label class="flbl">Casa hacienda</label>
+          <select id="pf-casa" class="fc"><option value="">—</option><option value="si">Sí</option><option value="no">No</option></select></div>
+        <div class="fg"><label class="flbl">Bodegas (cantidad)</label><input id="pf-bodegas" class="fc" type="number" min="0" placeholder="0"></div>
+        <div class="fg"><label class="flbl">Galpones avícolas</label><input id="pf-galpones" class="fc" type="number" min="0" placeholder="0"></div>
+        <div class="fg"><label class="flbl">Chancheras</label><input id="pf-chancheras" class="fc" type="number" min="0" placeholder="0"></div>
+        <div class="fg"><label class="flbl">Establos / corrales</label><input id="pf-establos" class="fc" type="number" min="0" placeholder="0"></div>
+        <div class="fg"><label class="flbl">Sistema de riego</label>
+          <select id="pf-riego" class="fc"><option value="">—</option><option>Ninguno</option><option>Goteo</option><option>Aspersión</option><option>Gravedad</option><option>Otro</option></select></div>
+        <div class="fg"><label class="flbl">Vías de acceso</label>
+          <select id="pf-vias" class="fc"><option value="">—</option><option>Asfaltada</option><option>Lastrada</option><option>Trocha</option><option>Mixta</option></select></div>
+        <div class="fg"><label class="flbl">Ciudad más cercana</label><input id="pf-ciudad" class="fc" type="text" placeholder="Quito"></div>
+        <div class="fg"><label class="flbl">Distancia a ciudad (km)</label><input id="pf-dist-ciudad" class="fc" type="number" step="0.1" placeholder="45"></div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Servicios disponibles</label>
+          <div class="flex flex-wrap gap1 mt1">
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-elec"> Electricidad</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-inet"> Internet</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-agua-svc"> Agua potable</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. PRODUCCIÓN Y LEGAL -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-hdr"><strong>Producción y Aspectos Legales</strong></div>
+      <div class="fgrid fg2 p2">
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Actividades principales</label>
+          <div class="flex flex-wrap gap1 mt1">
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="pf-act" value="Ganadería bovina"> Ganadería bovina</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="pf-act" value="Avicultura"> Avicultura</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="pf-act" value="Porcicultura"> Porcicultura</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="pf-act" value="Agricultura"> Agricultura</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="pf-act" value="Fruticultura"> Fruticultura</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" class="pf-act" value="Otra"> Otra</label>
+          </div>
+        </div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Descripción de producción actual</label><textarea id="pf-prod-desc" class="fc" rows="2" placeholder="Describe la producción actual..."></textarea></div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Objetivos productivos</label><textarea id="pf-objetivos" class="fc" rows="2" placeholder="Metas a corto y largo plazo..."></textarea></div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Certificaciones</label>
+          <div class="flex flex-wrap gap1 mt1">
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-cert-organico"> Orgánico</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pf-cert-gap"> GlobalG.A.P</label>
+          </div>
+          <input id="pf-cert-otras" class="fc mt1" placeholder="Otras certificaciones...">
+        </div>
+        <div class="fg" style="grid-column:1/-1"><label class="flbl">Observaciones Legales</label><textarea id="pf-legal-obs" class="fc" rows="2" placeholder="Permisos, trámites pendientes, etc."></textarea></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+    <button class="btn btn-dor" onclick="PerfilFinca.save()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Guardar Perfil
+    </button>
+    <button class="btn btn-ghost" onclick="PerfilFinca.exportarContexto()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Ver contexto Valentina
+    </button>
+  </div>
+  <div id="perfil-msg" style="margin-top:10px"></div>
+</section>
+
+
+<section id="mod-perfil" class="module">
+<div class="mod-header"><div class="mod-icon" style="background:var(--verde-pale)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--verde)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><h2>Perfil de la Finca</h2></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="perfil-tabs">
+  <button class="btn btn-sm perfil-tab active" onclick="PerfilFinca.tab('empresa')">🏢 Empresa</button>
+  <button class="btn btn-sm perfil-tab" onclick="PerfilFinca.tab('ubicacion')">📍 Ubicación</button>
+  <button class="btn btn-sm perfil-tab" onclick="PerfilFinca.tab('clima')">🌤 Clima</button>
+  <button class="btn btn-sm perfil-tab" onclick="PerfilFinca.tab('suelo')">🌱 Suelo</button>
+  <button class="btn btn-sm perfil-tab" onclick="PerfilFinca.tab('agua')">💧 Agua</button>
+  <button class="btn btn-sm perfil-tab" onclick="PerfilFinca.tab('infraestructura')">🏗 Infraestructura</button>
+  <button class="btn btn-sm perfil-tab" onclick="PerfilFinca.tab('produccion')">🌾 Producción</button>
+  <button class="btn btn-sm perfil-tab" onclick="PerfilFinca.tab('legal')">📋 Legal</button>
+</div>
+
+<div id="ptab-empresa" class="perfil-panel">
+  <div class="form-grid">
+    <div class="fg"><label>Nombre de la Finca</label><input id="pf-nombre" class="inp" placeholder="Finca SantaFe"></div>
+    <div class="fg"><label>Empresa Propietaria</label><input id="pf-empresa" class="inp" placeholder="DISTUCAR Cía. Ltda."></div>
+    <div class="fg"><label>RUC</label><input id="pf-ruc" class="inp" placeholder="0990000000001"></div>
+    <div class="fg"><label>Representante Legal</label><input id="pf-representante" class="inp" placeholder="Nombre del representante"></div>
+    <div class="fg" style="grid-column:1/-1"><label>Socios / Operadores</label><textarea id="pf-socios" class="inp" rows="2" placeholder="Nombres de los socios"></textarea></div>
+    <div class="fg"><label>Teléfono</label><input id="pf-telefono" class="inp" placeholder="+593 9..."></div>
+    <div class="fg"><label>Email</label><input id="pf-email" class="inp" placeholder="email@empresa.com"></div>
+    <div class="fg" style="grid-column:1/-1"><label>Descripción General</label><textarea id="pf-descripcion" class="inp" rows="3" placeholder="Descripción de las actividades de la finca"></textarea></div>
+  </div>
+</div>
+
+<div id="ptab-ubicacion" class="perfil-panel hidden">
+  <div class="form-grid">
+    <div class="fg"><label>Provincia</label><input id="pf-provincia" class="inp" placeholder="El Oro"></div>
+    <div class="fg"><label>Cantón</label><input id="pf-canton" class="inp" placeholder=""></div>
+    <div class="fg"><label>Parroquia</label><input id="pf-parroquia" class="inp" placeholder=""></div>
+    <div class="fg"><label>Dirección / Sector</label><input id="pf-direccion" class="inp" placeholder=""></div>
+    <div class="fg"><label>Latitud</label><input id="pf-lat" class="inp" type="number" step="0.000001" placeholder="-3.258"></div>
+    <div class="fg"><label>Longitud</label><input id="pf-lon" class="inp" type="number" step="0.000001" placeholder="-79.958"></div>
+    <div class="fg"><label>Altitud (msnm)</label><input id="pf-altitud" class="inp" type="number" placeholder="200"></div>
+    <div class="fg"><label>Hectáreas Totales</label><input id="pf-hectareas" class="inp" type="number" placeholder="0"></div>
+    <div class="fg"><label>Hectáreas Productivas</label><input id="pf-hectareas-prod" class="inp" type="number" placeholder="0"></div>
+    <div class="fg"><label>Topografía</label><select id="pf-topografia" class="inp"><option value="">Seleccionar</option><option>Plana</option><option>Ondulada</option><option>Montañosa</option><option>Mixta</option></select></div>
+  </div>
+</div>
+
+<div id="ptab-clima" class="perfil-panel hidden">
+  <div class="form-grid">
+    <div class="fg"><label>Temperatura Mínima (°C)</label><input id="pf-temp-min" class="inp" type="number" placeholder="18"></div>
+    <div class="fg"><label>Temperatura Máxima (°C)</label><input id="pf-temp-max" class="inp" type="number" placeholder="32"></div>
+    <div class="fg"><label>Temperatura Promedio (°C)</label><input id="pf-temp-prom" class="inp" type="number" placeholder="25"></div>
+    <div class="fg"><label>Humedad Relativa (%)</label><input id="pf-humedad" class="inp" type="number" placeholder="75"></div>
+    <div class="fg"><label>Precipitación Anual (mm)</label><input id="pf-precipitacion" class="inp" type="number" placeholder="1200"></div>
+    <div class="fg"><label>Horas de Sol por Día</label><input id="pf-sol" class="inp" type="number" step="0.5" placeholder="6"></div>
+    <div class="fg"><label>Vientos (dirección)</label><input id="pf-viento-dir" class="inp" placeholder="NE"></div>
+    <div class="fg"><label>Velocidad Viento (km/h)</label><input id="pf-viento-vel" class="inp" type="number" placeholder="15"></div>
+    <div class="fg"><label>Época Seca (meses)</label><input id="pf-seca" class="inp" placeholder="Jun - Sep"></div>
+    <div class="fg"><label>Época Lluviosa (meses)</label><input id="pf-lluviosa" class="inp" placeholder="Oct - May"></div>
+    <div class="fg"><label>Riesgo de Heladas</label><select id="pf-heladas" class="inp"><option value="">Seleccionar</option><option>Sin riesgo</option><option>Bajo</option><option>Medio</option><option>Alto</option></select></div>
+    <div class="fg"><label>Riesgo de Sequía</label><select id="pf-sequia" class="inp"><option value="">Seleccionar</option><option>Sin riesgo</option><option>Bajo</option><option>Medio</option><option>Alto</option></select></div>
+    <div class="fg" style="grid-column:1/-1"><label>Observaciones climáticas</label><textarea id="pf-clima-obs" class="inp" rows="2" placeholder="Notas adicionales sobre el clima"></textarea></div>
+  </div>
+</div>
+
+<div id="ptab-suelo" class="perfil-panel hidden">
+  <div class="form-grid">
+    <div class="fg"><label>Tipo de Suelo</label><select id="pf-suelo-tipo" class="inp"><option value="">Seleccionar</option><option>Franco</option><option>Arcilloso</option><option>Arenoso</option><option>Franco-arcilloso</option><option>Franco-arenoso</option><option>Limoso</option></select></div>
+    <div class="fg"><label>pH del Suelo</label><input id="pf-ph" class="inp" type="number" step="0.1" min="0" max="14" placeholder="6.5"></div>
+    <div class="fg"><label>Materia Orgánica (%)</label><input id="pf-mo" class="inp" type="number" step="0.1" placeholder="3.5"></div>
+    <div class="fg"><label>Nitrógeno - N (ppm)</label><input id="pf-nitrogeno" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Fósforo - P (ppm)</label><input id="pf-fosforo" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Potasio - K (ppm)</label><input id="pf-potasio" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Calcio - Ca (ppm)</label><input id="pf-calcio" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Magnesio - Mg (ppm)</label><input id="pf-magnesio" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Capacidad de Drenaje</label><select id="pf-drenaje" class="inp"><option value="">Seleccionar</option><option>Excelente</option><option>Bueno</option><option>Moderado</option><option>Pobre</option><option>Muy pobre</option></select></div>
+    <div class="fg"><label>Fecha del Análisis</label><input id="pf-suelo-fecha" class="inp" type="date"></div>
+    <div class="fg" style="grid-column:1/-1"><label>Laboratorio / Observaciones</label><textarea id="pf-suelo-obs" class="inp" rows="2" placeholder="Laboratorio que realizó el análisis"></textarea></div>
+  </div>
+</div>
+
+<div id="ptab-agua" class="perfil-panel hidden">
+  <div class="form-grid">
+    <div class="fg" style="grid-column:1/-1"><label style="font-weight:700;color:var(--verde)">💧 Pozo Profundo</label></div>
+    <div class="fg"><label>Profundidad (m)</label><input id="pf-pozo-prof" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Caudal (l/s)</label><input id="pf-pozo-caudal" class="inp" type="number" step="0.1" placeholder=""></div>
+    <div class="fg"><label>Calidad del Agua</label><select id="pf-pozo-calidad" class="inp"><option value="">Seleccionar</option><option>Potable</option><option>Apta para riego</option><option>Apta para animales</option><option>Requiere tratamiento</option></select></div>
+    <div class="fg"><label>Sistema de bombeo</label><input id="pf-pozo-bomba" class="inp" placeholder="Eléctrico, solar..."></div>
+    <div class="fg" style="grid-column:1/-1"><label style="font-weight:700;color:var(--verde)">🌊 Río / Acequia</label></div>
+    <div class="fg"><label>Nombre del Río</label><input id="pf-rio-nombre" class="inp" placeholder="Nombre del río"></div>
+    <div class="fg"><label>Caudal Estimado (m³/s)</label><input id="pf-rio-caudal" class="inp" type="number" step="0.01" placeholder=""></div>
+    <div class="fg"><label>Disponibilidad</label><select id="pf-rio-disp" class="inp"><option value="">Seleccionar</option><option>Todo el año</option><option>Época lluviosa</option><option>Estacional</option></select></div>
+    <div class="fg"><label>Uso actual</label><input id="pf-rio-uso" class="inp" placeholder="Riego, bebedero..."></div>
+    <div class="fg" style="grid-column:1/-1"><label style="font-weight:700;color:var(--verde)">🪨 Concesión Material Pétreo</label></div>
+    <div class="fg"><label>Estado de Concesión</label><select id="pf-petro-estado" class="inp"><option value="en tramite">En trámite</option><option value="activa">Activa</option><option value="sin concesion">Sin concesión</option><option value="suspendida">Suspendida</option></select></div>
+    <div class="fg"><label>Nº Concesión</label><input id="pf-petro-num" class="inp" placeholder=""></div>
+    <div class="fg"><label>Material Principal</label><input id="pf-petro-material" class="inp" placeholder="Ripio, arena, piedra..."></div>
+    <div class="fg"><label>Volumen Autorizado (m³/año)</label><input id="pf-petro-vol" class="inp" type="number" placeholder=""></div>
+    <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><textarea id="pf-agua-obs" class="inp" rows="2" placeholder="Notas sobre las fuentes de agua"></textarea></div>
+  </div>
+</div>
+
+<div id="ptab-infraestructura" class="perfil-panel hidden">
+  <div class="form-grid">
+    <div class="fg"><label>Galpones / Corrales (m²)</label><input id="pf-galpones" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Establos (m²)</label><input id="pf-establos" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Bodegas (m²)</label><input id="pf-bodegas" class="inp" type="number" placeholder=""></div>
+    <div class="fg"><label>Vivienda en finca</label><select id="pf-vivienda" class="inp"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
+    <div class="fg"><label>Sistema Eléctrico</label><select id="pf-electrico" class="inp"><option value="">Seleccionar</option><option>Red pública</option><option>Panel solar</option><option>Generador</option><option>Mixto</option><option>Sin electricidad</option></select></div>
+    <div class="fg"><label>Sistema de Riego</label><select id="pf-riego" class="inp"><option value="">Seleccionar</option><option>Aspersión</option><option>Goteo</option><option>Gravedad</option><option>Inundación</option><option>Sin sistema</option></select></div>
+    <div class="fg"><label>Vías de Acceso</label><select id="pf-vias" class="inp"><option value="">Seleccionar</option><option>Carretera asfaltada</option><option>Carretera lastrada</option><option>Camino de tierra</option><option>Solo 4x4</option></select></div>
+    <div class="fg"><label>N° Trabajadores</label><input id="pf-trabajadores" class="inp" type="number" placeholder="0"></div>
+    <div class="fg" style="grid-column:1/-1"><label>Otras instalaciones</label><textarea id="pf-infra-obs" class="inp" rows="2" placeholder="Describe otras instalaciones"></textarea></div>
+  </div>
+</div>
+
+<div id="ptab-produccion" class="perfil-panel hidden">
+  <div class="form-grid">
+    <div class="fg" style="grid-column:1/-1"><label>Actividades Productivas</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+        <label class="check-lbl"><input type="checkbox" id="pf-act-ganado"> Ganadería</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-act-aves"> Avicultura</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-act-cerdos"> Porcicultura</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-act-agricola"> Agricultura</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-act-forestal"> Forestal</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-act-acuicola"> Acuicultura</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-act-petreo"> Material Pétreo</label>
+      </div>
+    </div>
+    <div class="fg" style="grid-column:1/-1"><label>Pastos Actuales</label><input id="pf-pastos" class="inp" placeholder="Brachiaria, Maralfalfa, Guinea..."></div>
+    <div class="fg" style="grid-column:1/-1"><label>Cultivos Actuales</label><input id="pf-cultivos" class="inp" placeholder="Maíz, cacao, plátano..."></div>
+    <div class="fg" style="grid-column:1/-1"><label>Historial de Rotación</label><textarea id="pf-rotacion" class="inp" rows="2" placeholder="Últimos cultivos sembrados"></textarea></div>
+    <div class="fg" style="grid-column:1/-1"><label>Plagas / Enfermedades Frecuentes</label><textarea id="pf-plagas" class="inp" rows="2" placeholder="Principales problemas fitosanitarios de la zona"></textarea></div>
+    <div class="fg" style="grid-column:1/-1"><label>Fertilizantes / Agroquímicos Habituales</label><textarea id="pf-agroquimicos" class="inp" rows="2" placeholder="Productos que se utilizan regularmente"></textarea></div>
+  </div>
+</div>
+
+<div id="ptab-legal" class="perfil-panel hidden">
+  <div class="form-grid">
+    <div class="fg"><label>UPAS (Código)</label><input id="pf-upas" class="inp" placeholder=""></div>
+    <div class="fg"><label>Seguro Agrícola</label><select id="pf-seguro" class="inp"><option value="">Seleccionar</option><option>Sí</option><option>No</option><option>En trámite</option></select></div>
+    <div class="fg" style="grid-column:1/-1"><label style="font-weight:700;color:var(--verde)">🏅 Certificaciones (metas futuras)</label></div>
+    <div class="fg" style="grid-column:1/-1">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <label class="check-lbl"><input type="checkbox" id="pf-cert-bpa"> BPA (Buenas Prácticas Agrícolas)</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-cert-organico"> Producción Orgánica</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-cert-iso"> ISO 14001</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-cert-rainforest"> Rainforest Alliance</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-cert-fairtrade"> Fair Trade</label>
+        <label class="check-lbl"><input type="checkbox" id="pf-cert-global"> GlobalG.A.P</label>
+      </div>
+      <input id="pf-cert-otras" class="inp" placeholder="Otras certificaciones...">
+    </div>
+    <div class="fg" style="grid-column:1/-1"><label>Observaciones Legales</label><textarea id="pf-legal-obs" class="inp" rows="2" placeholder="Permisos, trámites pendientes, etc."></textarea></div>
+  </div>
+</div>
+
+<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+  <button class="btn btn-primary" onclick="PerfilFinca.save()">💾 Guardar Perfil</button>
+  <button class="btn" onclick="PerfilFinca.exportarContexto()">🤖 Ver contexto Valentina</button>
+</div>
+<div id="perfil-msg" style="margin-top:10px"></div>
+</section>
 <section id="mod-admin" class="module">
   <div class="mhd">
     <div class="mhd-l">
@@ -2168,6 +2528,7 @@ const Nav = {
     { id:'inventario', label:'Inventario',   icon:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' },
     { id:'reportes',   label:'Reportes',    icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>' },
     { id:'admin',      label:'Admin',       icon:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',  adminOnly: true },
+    { id:'perfil',     label:'Perfil Finca', icon:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',  ownerAdmin: true },
     { id:'valentina',  label:'Valentina IA', icon:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>' }
   ],
 
@@ -2177,6 +2538,7 @@ const Nav = {
     nav.innerHTML = '';
     Nav.NAV.forEach(item => {
       if (item.adminOnly && lvl > 0) return;
+      if (item.ownerAdmin && lvl > 1) return;
       const el = document.createElement('div');
       el.className = 'ni' + (App.module === item.id ? ' active' : '');
       el.dataset.mod = item.id;
@@ -2209,7 +2571,7 @@ const Nav = {
     // Load module data
     const loaders = { dashboard:Dashboard.load, gastos:Gastos.load, ingresos:Ingresos.load,
       ganado:Ganado.load, aves:Aves.load, cerdos:Cerdos.load, agricola:Agricola.load,
-      calendario:Calendario.load, contactos:Contactos.load, inventario:Inventario.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
+      perfil:PerfilFinca.load,calendario:Calendario.load, contactos:Contactos.load, inventario:Inventario.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
     if (loaders[id]) loaders[id]();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
@@ -3916,6 +4278,85 @@ const Reportes = {
 // =====================================================
 // ADMIN
 // =====================================================
+
+// =====================================================
+// PERFIL FINCA
+// =====================================================
+const PerfilFinca = {
+  _fields: ['nombre','empresa','ruc','representante','socios','telefono','email','descripcion',
+    'provincia','canton','parroquia','direccion','lat','lon','altitud','hectareas','hectareas-prod','topografia',
+    'temp-min','temp-max','temp-prom','humedad','precipitacion','sol','viento-dir','viento-vel','seca','lluviosa','heladas','sequia','clima-obs',
+    'suelo-tipo','ph','mo','nitrogeno','fosforo','potasio','calcio','magnesio','drenaje','suelo-fecha','suelo-obs',
+    'pozo-prof','pozo-caudal','pozo-calidad','pozo-bomba','rio-nombre','rio-caudal','rio-disp','rio-uso',
+    'petro-estado','petro-num','petro-material','petro-vol','agua-obs',
+    'galpones','establos','bodegas','vivienda','electrico','riego','vias','trabajadores','infra-obs',
+    'pastos','cultivos','rotacion','plagas','agroquimicos',
+    'upas','seguro','cert-otras','legal-obs'],
+  _checks: ['act-ganado','act-aves','act-cerdos','act-agricola','act-forestal','act-acuicola','act-petreo',
+    'cert-bpa','cert-organico','cert-iso','cert-rainforest','cert-fairtrade','cert-global'],
+
+  tab(name) {
+    document.querySelectorAll('.perfil-panel').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('.perfil-tab').forEach(b => b.classList.remove('active'));
+    const panel = document.getElementById('ptab-' + name);
+    if(panel) panel.classList.remove('hidden');
+    event.target.classList.add('active');
+  },
+
+  async load() {
+    try {
+      const doc = await App.db.collection('finca').doc('perfil').get();
+      if(!doc.exists) return;
+      const d = doc.data();
+      this._fields.forEach(f => {
+        const el = document.getElementById('pf-' + f);
+        if(el && d[f] !== undefined) el.value = d[f];
+      });
+      this._checks.forEach(f => {
+        const el = document.getElementById('pf-' + f);
+        if(el && d[f] !== undefined) el.checked = d[f];
+      });
+    } catch(e) { console.error('PerfilFinca.load:', e); }
+  },
+
+  async save() {
+    const msg = document.getElementById('perfil-msg');
+    msg.innerHTML = '<span class="c-gris tsm">Guardando...</span>';
+    try {
+      const data = { updatedAt: new Date().toISOString() };
+      this._fields.forEach(f => {
+        const el = document.getElementById('pf-' + f);
+        if(el) data[f] = el.value;
+      });
+      this._checks.forEach(f => {
+        const el = document.getElementById('pf-' + f);
+        if(el) data[f] = el.checked;
+      });
+      await App.db.collection('finca').doc('perfil').set(data, { merge: true });
+      msg.innerHTML = '<span style="color:var(--ok)">✅ Perfil guardado correctamente</span>';
+      setTimeout(() => msg.innerHTML = '', 3000);
+    } catch(e) {
+      msg.innerHTML = '<span style="color:var(--rojo)">❌ Error al guardar: ' + e.message + '</span>';
+    }
+  },
+
+  exportarContexto() {
+    const d = {};
+    this._fields.forEach(f => { const el = document.getElementById('pf-' + f); if(el) d[f] = el.value; });
+    this._checks.forEach(f => { const el = document.getElementById('pf-' + f); if(el) d[f] = el.checked; });
+    const ctx = `PERFIL DE LA FINCA:
+Nombre: ${d.nombre||'Finca SantaFe'} | Empresa: ${d.empresa||'DISTUCAR Cía. Ltda.'}
+Ubicación: ${d.provincia||''} ${d.canton||''}, altitud: ${d.altitud||'?'} msnm
+Clima: Temp ${d['temp-min']||'?'}-${d['temp-max']||'?'}°C, Humedad: ${d.humedad||'?'}%, Precipitación: ${d.precipitacion||'?'}mm/año
+Suelo: ${d['suelo-tipo']||'?'}, pH: ${d.ph||'?'}, MO: ${d.mo||'?'}%
+N:${d.nitrogeno||'?'} P:${d.fosforo||'?'} K:${d.potasio||'?'} ppm
+Agua: Pozo ${d['pozo-prof']||'?'}m caudal ${d['pozo-caudal']||'?'}l/s; Río: ${d['rio-nombre']||'?'}
+Pastos actuales: ${d.pastos||'?'} | Cultivos: ${d.cultivos||'?'}
+Trabajadores: ${d.trabajadores||'?'} | Hectáreas: ${d.hectareas||'?'} total, ${d['hectareas-prod']||'?'} productivas`;
+    UI.showModal('Contexto para Valentina', `<div style="background:var(--g100);padding:12px;border-radius:8px;font-size:.8rem;white-space:pre-wrap;font-family:monospace">${ctx}</div><p class="tsm c-gris" style="margin-top:8px">Este contexto se envía automáticamente a Valentina en cada consulta.</p>`);
+  }
+};
+
 const Admin = {
   _users:[],
 
