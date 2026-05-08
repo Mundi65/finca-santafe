@@ -2304,16 +2304,21 @@ const Dashboard = {
       const rangoSnap = await App.db.collection('eventos').where('tipoFecha','==','rango').get();
       const rangoEvts = rangoSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>(e.fechaInicio||e.fecha)<=today&&(e.fechaFin||e.fechaInicio||e.fecha)>=today);
       const recEvts = [...recSnap.docs.map(d=>({id:d.id,...d.data()})).filter(e=>(e.fechaInicio||e.fecha)<=today), ...unicaSnap.docs.map(d=>({id:d.id,...d.data()})), ...rangoEvts];
-      const recWrap = document.getElementById('dash-recurrentes-wrap');
-      const recEl = document.getElementById('dash-recurrentes');
+      const hoyEl = document.getElementById('dash-hoy-list');
+      const HCOL = {visita:'#084298',vacunacion:'#0F5132',pago:'#842029',cosecha:'#5A3E00',mantenimiento:'#5A2D82',reunion:'#0B4F5A',otro:'#495057'};
       if(recEvts.length){
-        if(recWrap) recWrap.style.display='';
-        recEl.innerHTML = recEvts.map(e=>`<div class="flex jc-sb items-c" style="padding:8px 0;border-bottom:1px solid var(--g100)">
-          <div><div class="tsm fb">${Utils.sanitize(e.titulo)}</div>
-          <div class="txs c-gris">${Utils.fmtDate(e.fechaInicio||e.fecha)} <span class="badge b-azul" style="font-size:.7rem">${e.recurrencia}</span> · ${Utils.eventoLabel(e.tipo)}</div></div>
-        </div>`).join('');
-      } else {
-        if(recWrap) recWrap.style.display='none';
+        const evHtml = recEvts.map(e=>{
+          const col = HCOL[e.tipo]||'#495057';
+          const badge = e.tipoFecha==='recurrente'?` <span style="font-size:.65rem;opacity:.7">${e.recurrencia||'↻'}</span>':                        e.tipoFecha==='rango'?' <span style="font-size:.65rem;opacity:.7">↔ En curso</span>':'';
+          return `<div class="hoy-ev-item">
+            <div class="hoy-ev-bar" style="background:${col}"></div>
+            <div style="flex:1">
+              <div class="tsm fb">${Utils.sanitize(e.titulo)}${badge}</div>
+              <div class="txs c-gris">${Utils.fmtDate(e.fechaInicio||e.fecha)} · ${Utils.eventoLabel(e.tipo)}</div>
+            </div>
+          </div>`;
+        }).join('');
+        hoyEl.innerHTML = evHtml;
       }
 
       // Charts
