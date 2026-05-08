@@ -2309,7 +2309,7 @@ const Dashboard = {
       if(recEvts.length){
         const evHtml = recEvts.map(e=>{
           const col = HCOL[e.tipo]||'#495057';
-          const badge = e.tipoFecha==='recurrente'?` <span style="font-size:.65rem;opacity:.7">${e.recurrencia||'↻'}</span>':                        e.tipoFecha==='rango'?' <span style="font-size:.65rem;opacity:.7">↔ En curso</span>':'';
+          const badge = e.tipoFecha==='recurrente'?` <span style="font-size:.65rem;opacity:.7">${e.recurrencia||'↻'}</span>`:e.tipoFecha==='rango'?` <span style="font-size:.65rem;opacity:.7">↔ En curso</span>`:'';
           return `<div class="hoy-ev-item">
             <div class="hoy-ev-bar" style="background:${col}"></div>
             <div style="flex:1">
