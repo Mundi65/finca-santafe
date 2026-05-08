@@ -1812,7 +1812,7 @@ const Utils = {
   parseDate: d => { if(!d)return null; if(d.seconds)return new Date(d.seconds*1000); if(typeof d?.toDate==='function')return d.toDate(); if(typeof d==='number')return new Date(d); if(typeof d==='string')return new Date(d+(d.includes('T')?'':'T00:00:00')); return null; },
   fmtDate: d => { const x=Utils.parseDate(d); if (!x||isNaN(x)) return '—'; return x.toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}); },
   fmtDateInput: d => { const x=Utils.parseDate(d); if (!x||isNaN(x)) return ''; return x.toISOString().split('T')[0]; },
-  today: () => new Date().toISOString().split('T')[0],
+  today: () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); },
   thisMonth: () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; },
   daysBetween: (d1, d2) => Math.max(0, Math.round((new Date(d2) - new Date(d1)) / 86400000)),
   initials: name => (name||'?').trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2),
