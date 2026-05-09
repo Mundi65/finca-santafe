@@ -4577,7 +4577,7 @@ const Articulos = {
   // Artículos de respaldo cuando RSS falla
   FB: {
     dashboard: [
-      { title: 'Digitalizar la gestión de tu finca: herramientas prácticas para 2025', description: 'La digitalización reduce pérdidas y mejora las decisiones. Apps de gestión, registros digitales y sistemas de seguimiento accesibles para fincas medianas.', url: 'https://www.engormix.com/', date: '2025-05-06', source: 'AgroNoticias', img: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=480&h=260&fit=crop' },
+      { title: 'Engormix: la mayor red agropecuaria de Latinoamérica', description: 'La digitalización reduce pérdidas y mejora las decisiones. Apps de gestión, registros digitales y sistemas de seguimiento accesibles para fincas medianas.', url: 'https://www.agronegocios.es/', date: '2025-05-06', source: 'AgroNoticias', img: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=480&h=260&fit=crop' },
       { title: 'Construcción de galpones para el trópico: diseños eficientes y económicos', description: 'Tendencias en infraestructura que mejoran el bienestar animal y reducen costos de construcción hasta un 25% usando materiales locales disponibles.', url: 'https://www.engormix.com/', date: '2025-05-02', source: 'Portal Veterinaria', img: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=480&h=260&fit=crop' },
       { title: 'Alimentación estratégica: bajar costos sin afectar la producción animal', description: 'Estrategias con insumos locales que reducen dependencia de importados. Casos reales de fincas que mejoraron márgenes sin sacrificar indicadores productivos.', url: 'https://www.engormix.com/', date: '2025-04-28', source: 'Engormix', img: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=480&h=260&fit=crop' },
       { title: 'Registros en la finca: cómo transformar datos en rentabilidad', description: 'Los productores con registros sistemáticos obtienen hasta 20% más rentabilidad. Qué datos son los más importantes y cómo organizarlos fácilmente.', url: 'https://www.engormix.com/', date: '2025-04-22', source: 'Ganadería.com', img: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop' }
@@ -4636,36 +4636,43 @@ const Articulos = {
   },
 
   _filtrar(items, q) {
-    // Filtro local por palabras clave - funciona sin API key
-    const topKw = (q || '').toLowerCase().replace(/ OR /gi, ' ').split(/\s+/).filter(Boolean);
-    const tecKw = ['nutricion','nutrición','manejo','sanidad','genética','genetica',
-      'forraje','pastura','bioseguridad','vacuna','engorde','reproduccion','reproducción',
-      'lactancia','peso','raza','produccion','producción','galpon','galpón',
-      'lechon','lechón','suplemento','mineral','proteina','vitamina','hato',
-      'ciclo','rendimiento','conversion','conversión','inseminacion','destete',
+    // Normalizar texto - quita acentos para comparar correctamente
+    const norm = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const topKw = norm(q).replace(/ or /g,' ').split(/\s+/).filter(k=>k.length>3);
+    // Solo keywords tecnicos generales (sin nombres de animales especificos)
+    const tecKw = ['nutricion','manejo','sanidad','forraje','pastura','bioseguridad',
+      'vacuna','engorde','reproduccion','lactancia','raza','produccion','galpon',
+      'suplemento','mineral','proteina','vitamina','ciclo','rendimiento',
       'antibiotico','mortalidad','fertilidad','crecimiento','alimento','pasto',
-      'balanceado','granja','bovino','porcino','avicola','avícola','ganaderia',
-      'ganadería','pecuario','agropecuario','especie','raza','engorda','ceba'];
-    const excKw = ['messi','mbappé','mbappe','neymar','ronaldo','futbol','fútbol',
-      'mundial 2026','copa del mundo','restaurante','receta','día de las madres',
-      'madre','mamá','política','politica','elección','eleccion','senado','congreso',
-      'diputado','supermercado','mercadona','lidl','carrefour','walmart','boda',
-      'accidente','crimen','robo','detenido','corona','funeral','amenaza',
-      'tiktok','netflix','película','canción','cantante','actor','actriz',
-      'taiwan','corea','china','rusia','ucrania','israel','gaza'];
+      'balanceado','agropecuario','pecuario','engorda','ceba','destete',
+      'inseminacion','praderas','siembra','cosecha','crianza','hembra','macho',
+      'finca','granja','lote','hato','camada','reproductora','semen','embrion'];
+    // Keywords que eliminan el articulo
+    const excKw = ['messi','mbappe','neymar','futbol','copa mundo','mundial 2026',
+      'restaurante','receta','dia de las madres','supermercado','mercadona','lidl',
+      'carrefour','walmart','boda','accidente','crimen','corona','funeral',
+      'tiktok','netflix','pelicula','actor','actriz','cantante','cancion',
+      'taiwan','corea','rusia','ucrania','israel','palestina','hamas',
+      'congreso','senado','diputado','eleccion','politica','presidente',
+      'impuesto','arancel','bolsa','dolar','inflacion','recesion'];
 
     const scored = items.map(it => {
-      const txt = ((it.title || '') + ' ' + (it.description || '')).toLowerCase();
-      let score = 0;
-      topKw.forEach(kw => { if (kw.length > 3 && txt.includes(kw)) score += 3; });
-      tecKw.forEach(kw => { if (txt.includes(kw)) score += 2; });
-      excKw.forEach(kw => { if (txt.includes(kw)) score -= 15; });
+      const txt = norm((it.title||'')+' '+(it.description||''));
+      // Contar cuantos keywords del tema principal aparecen
+      const topHits = topKw.filter(kw => txt.includes(kw)).length;
+      let score = topHits * 5; // 5 puntos por cada keyword del tema
+      tecKw.forEach(kw => { if(txt.includes(kw)) score += 1; });
+      excKw.forEach(kw => { if(txt.includes(kw)) score -= 15; });
+      // Penalizar si no tiene ninguna palabra del tema
+      if(topHits === 0) score = Math.min(score, -5);
       return { it, score };
     });
 
-    const buenos = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
-    const fuente = buenos.length >= 2 ? buenos : scored.sort((a, b) => b.score - a.score);
-    return fuente.slice(0, 4).map(s => s.it);
+    // Mostrar solo los que pasaron el filtro (score > 0)
+    const buenos = scored.filter(s=>s.score>0).sort((a,b)=>b.score-a.score);
+    if(buenos.length >= 1) return buenos.slice(0,4).map(s=>s.it);
+    // Si nada pasa, mostrar los menos malos
+    return scored.sort((a,b)=>b.score-a.score).slice(0,4).map(s=>s.it);
   },
 
   refresh(sid) {
