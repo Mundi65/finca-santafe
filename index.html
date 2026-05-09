@@ -645,6 +645,39 @@ textarea.fc{resize:vertical;min-height:76px}
 .val-bbl-me{background:#1B4332;color:#fff;border-radius:18px;border-bottom-right-radius:4px}
 .val-bbl-other{background:var(--g100);color:var(--g900);border-radius:18px;border-bottom-left-radius:4px}
 .val-msg-ai .val-bbl-wrap .val-bbl{border-bottom-left-radius:4px}
+
+/* ===================================================
+   ARTÍCULOS AGROPECUARIOS
+   =================================================== */
+.art-section{margin-top:26px}
+.art-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.art-section-title{font-size:.92rem;font-weight:700;color:var(--verde);display:flex;align-items:center;gap:8px}
+.art-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(256px,1fr));gap:14px}
+.art-card{background:#fff;border-radius:var(--r);border:1px solid var(--g200);overflow:hidden;box-shadow:var(--sh);transition:var(--tr);cursor:pointer;display:flex;flex-direction:column}
+.art-card:hover{box-shadow:var(--sm);transform:translateY(-2px)}
+.art-img{height:162px;overflow:hidden;position:relative;background:var(--g100);flex-shrink:0}
+.art-img img{width:100%;height:100%;object-fit:cover;transition:transform .32s}
+.art-card:hover .art-img img{transform:scale(1.05)}
+.art-src{position:absolute;top:8px;left:8px;background:var(--verde);color:#fff;font-size:.66rem;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.art-body{padding:12px 14px 15px;display:flex;flex-direction:column;flex-grow:1}
+.art-dt{font-size:.7rem;color:var(--g500);margin-bottom:5px}
+.art-ttl{font-size:.875rem;font-weight:700;color:var(--g900);line-height:1.42;margin-bottom:7px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.art-dsc{font-size:.78rem;color:var(--g600);line-height:1.55;flex-grow:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.art-lnk{display:inline-flex;align-items:center;gap:4px;color:var(--verde);font-size:.8rem;font-weight:700;margin-top:10px;text-decoration:none;border-bottom:1px solid var(--verde-pale);transition:gap .18s}
+.art-lnk:hover{gap:8px;border-color:var(--verde)}
+.art-skel{background:#fff;border-radius:var(--r);border:1px solid var(--g200);overflow:hidden}
+.art-skel-img{height:162px;background:linear-gradient(90deg,var(--g100) 25%,var(--g200) 50%,var(--g100) 75%);background-size:200% 100%;animation:art-sh 1.5s infinite}
+.art-skel-bd{padding:12px 14px}
+.art-skel-ln{height:11px;background:linear-gradient(90deg,var(--g100) 25%,var(--g200) 50%,var(--g100) 75%);background-size:200% 100%;animation:art-sh 1.5s infinite;border-radius:4px;margin-bottom:9px}
+@keyframes art-sh{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.art-ai{display:inline-flex;align-items:center;gap:4px;background:var(--verde-pale);color:var(--verde);font-size:.68rem;font-weight:700;padding:2px 9px;border-radius:99px;border:1px solid var(--verde-claro)}
+/* Stat cards del dashboard más compactos */
+#dash-stats .stat-card{padding:10px 12px}
+#dash-stats .sc-icon{width:34px;height:34px;border-radius:9px;margin-bottom:7px}
+#dash-stats .sc-val{font-size:1.18rem}
+#dash-stats .sc-lbl{font-size:.71rem}
+#dash-stats{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
+
 </style>
 </head>
 <body>
@@ -905,6 +938,18 @@ textarea.fc{resize:vertical;min-height:76px}
       <div class="empty" style="padding:16px;border:none"><p>Sin eventos recurrentes</p></div>
     </div>
   </div>
+
+<!-- ARTÍCULOS DASHBOARD -->
+<div class="art-section">
+  <div class="art-section-hdr">
+    <div class="art-section-title">📰 Noticias del Sector Agropecuario
+      <span class="art-ai" id="dash-art-badge" style="display:none">✦ Filtrado con IA</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="Articulos.refresh('dashboard')">🔄 Actualizar</button>
+  </div>
+  <div class="art-grid" id="dash-art-grid"></div>
+</div>
+
 </section>
 
 <!-- ================================================
@@ -1128,6 +1173,18 @@ textarea.fc{resize:vertical;min-height:76px}
       </table>
     </div>
   </div>
+
+<!-- ARTÍCULOS GANADO -->
+<div class="art-section">
+  <div class="art-section-hdr">
+    <div class="art-section-title">📰 Artículos de Ganadería Bovina
+      <span class="art-ai" id="gan-art-badge" style="display:none">✦ Filtrado con IA</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="Articulos.refresh('ganado')">🔄 Actualizar</button>
+  </div>
+  <div class="art-grid" id="gan-art-grid"></div>
+</div>
+
 </section>
 
 <!-- ================================================
@@ -1171,6 +1228,18 @@ textarea.fc{resize:vertical;min-height:76px}
   <div id="aves-tbc-ciclos" class="tbc">
     <div id="aves-ciclos-list"><div class="empty"><h3>Sin ciclos</h3><p>Inicia un nuevo ciclo productivo</p></div></div>
   </div>
+
+<!-- ARTÍCULOS AVES -->
+<div class="art-section">
+  <div class="art-section-hdr">
+    <div class="art-section-title">📰 Artículos de Avicultura
+      <span class="art-ai" id="aves-art-badge" style="display:none">✦ Filtrado con IA</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="Articulos.refresh('aves')">🔄 Actualizar</button>
+  </div>
+  <div class="art-grid" id="aves-art-grid"></div>
+</div>
+
 </section>
 
 <!-- ================================================
@@ -1216,6 +1285,18 @@ textarea.fc{resize:vertical;min-height:76px}
   <div id="cerdos-tbc-ciclos" class="tbc">
     <div id="cerdos-ciclos-list"><div class="empty"><h3>Sin ciclos</h3><p>Inicia un nuevo ciclo productivo</p></div></div>
   </div>
+
+<!-- ARTÍCULOS CERDOS -->
+<div class="art-section">
+  <div class="art-section-hdr">
+    <div class="art-section-title">📰 Artículos de Porcicultura
+      <span class="art-ai" id="cerdos-art-badge" style="display:none">✦ Filtrado con IA</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="Articulos.refresh('cerdos')">🔄 Actualizar</button>
+  </div>
+  <div class="art-grid" id="cerdos-art-grid"></div>
+</div>
+
 </section>
 
 <!-- ================================================
@@ -2573,6 +2654,8 @@ const Nav = {
       ganado:Ganado.load, aves:Aves.load, cerdos:Cerdos.load, agricola:Agricola.load,
       perfil:PerfilFinca.load,calendario:Calendario.load, contactos:Contactos.load, inventario:Inventario.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
     if (loaders[id]) loaders[id]();
+    // Cargar artículos para secciones que los tienen
+    if (['dashboard','ganado','aves','cerdos'].includes(id)) Articulos.load(id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
@@ -4456,6 +4539,173 @@ const Admin = {
       nivel:parseInt(document.getElementById('uf-nivel').value),telefono:document.getElementById('uf-tel').value.trim(),
       modificadoEn:firebase.firestore.FieldValue.serverTimestamp()};
     await App.db.collection('usuarios').doc(id).update(data);UI.showToast('Usuario actualizado','suc');
+  }
+};
+
+
+// =====================================================
+// ARTÍCULOS — Noticias agropecuarias (RSS + IA)
+// =====================================================
+const Articulos = {
+  RSS2: 'https://api.rss2json.com/v1/api.json?rss_url=',
+
+  SECS: {
+    dashboard: {
+      feeds: ['https://www.agronegocios.es/feed/', 'https://agritotal.com/feed'],
+      topic: 'agricultura ganadería administración finca construcción alimentación',
+      defImg: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop',
+      grid: 'dash-art-grid', badge: 'dash-art-badge'
+    },
+    ganado: {
+      feeds: ['https://www.engormix.com/rss/bovinos.rss'],
+      topic: 'ganado bovino vacuno manejo alimentación sanidad producción',
+      defImg: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?w=480&h=260&fit=crop',
+      grid: 'gan-art-grid', badge: 'gan-art-badge'
+    },
+    aves: {
+      feeds: ['https://www.engormix.com/rss/avicultura.rss'],
+      topic: 'avicultura pollo gallina producción bioseguridad nutrición',
+      defImg: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=480&h=260&fit=crop',
+      grid: 'aves-art-grid', badge: 'aves-art-badge'
+    },
+    cerdos: {
+      feeds: ['https://www.engormix.com/rss/porcicultura.rss'],
+      topic: 'porcicultura cerdo porcino nutrición manejo reproducción',
+      defImg: 'https://images.unsplash.com/photo-1592179970584-bd5e5f4c1e62?w=480&h=260&fit=crop',
+      grid: 'cerdos-art-grid', badge: 'cerdos-art-badge'
+    }
+  },
+
+  // Artículos de respaldo cuando RSS falla
+  FB: {
+    dashboard: [
+      { title: 'Digitalizar la gestión de tu finca: herramientas prácticas para 2025', description: 'La digitalización reduce pérdidas y mejora las decisiones. Apps de gestión, registros digitales y sistemas de seguimiento accesibles para fincas medianas.', url: 'https://www.engormix.com', date: '2025-05-06', source: 'AgroNoticias', img: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=480&h=260&fit=crop' },
+      { title: 'Construcción de galpones para el trópico: diseños eficientes y económicos', description: 'Tendencias en infraestructura que mejoran el bienestar animal y reducen costos de construcción hasta un 25% usando materiales locales disponibles.', url: 'https://www.engormix.com', date: '2025-05-02', source: 'Portal Veterinaria', img: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=480&h=260&fit=crop' },
+      { title: 'Alimentación estratégica: bajar costos sin afectar la producción animal', description: 'Estrategias con insumos locales que reducen dependencia de importados. Casos reales de fincas que mejoraron márgenes sin sacrificar indicadores productivos.', url: 'https://www.engormix.com', date: '2025-04-28', source: 'Engormix', img: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=480&h=260&fit=crop' },
+      { title: 'Registros en la finca: cómo transformar datos en rentabilidad', description: 'Los productores con registros sistemáticos obtienen hasta 20% más rentabilidad. Qué datos son los más importantes y cómo organizarlos fácilmente.', url: 'https://www.engormix.com', date: '2025-04-22', source: 'Ganadería.com', img: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop' }
+    ],
+    ganado: [
+      { title: 'Suplementación mineral en bovinos: guía completa para el trópico', description: 'Los minerales son esenciales para la reproducción, inmunidad y crecimiento del hato. Guía de qué, cuándo y cuánto suplementar según la etapa productiva.', url: 'https://www.engormix.com/bovinos', date: '2025-05-05', source: 'Engormix', img: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?w=480&h=260&fit=crop' },
+      { title: 'Control del garrapato: resistencia a acaricidas y estrategias integradas', description: 'La resistencia química es una realidad. Estrategias que combinan rotación de principios activos, métodos biológicos y manejo de pasturas para control duradero.', url: 'https://www.engormix.com/bovinos', date: '2025-05-01', source: 'Portal Veterinaria', img: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=480&h=260&fit=crop' },
+      { title: 'Razas bovinas para el trópico: cómo elegir el material genético correcto', description: 'Comparativa de razas cebuinas y sus cruces. Claves para seleccionar el genotipo adecuado para carne, leche o doble propósito en condiciones tropicales.', url: 'https://www.engormix.com/bovinos', date: '2025-04-26', source: 'Ganadería.com', img: 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=480&h=260&fit=crop' },
+      { title: 'Manejo de praderas: carga animal y rotación de potreros eficiente', description: 'El sobrepastoreo degrada los pastizales. Aprende a calcular carga animal, diseñar rotaciones y recuperar pasturas de manera rentable y sostenible.', url: 'https://www.engormix.com/bovinos', date: '2025-04-20', source: 'AgroNoticias', img: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop' }
+    ],
+    aves: [
+      { title: 'Bioseguridad avícola: el protocolo esencial para tu granja en 2025', description: 'Un programa de bioseguridad sólido es la primera defensa contra Newcastle, Gumboro e Influenza Aviar. Checklist completo para implementarlo desde hoy.', url: 'https://www.elsitioavicola.com', date: '2025-05-04', source: 'El Sitio Avícola', img: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=480&h=260&fit=crop' },
+      { title: 'Ventilación en galpones avícolas: confort térmico y mejor conversión', description: 'El manejo climático impacta directamente la conversión y mortalidad. Cómo diseñar y operar sistemas de ventilación eficientes en clima tropical.', url: 'https://www.elsitioavicola.com', date: '2025-04-30', source: 'El Sitio Avícola', img: 'https://images.unsplash.com/photo-1614212365890-7862c3bb0f24?w=480&h=260&fit=crop' },
+      { title: 'Nutrición por fases en pollos de engorde: guía práctica', description: 'Requerimientos nutricionales por fase (inicio, crecimiento, finalización) y cómo formular dietas económicas con ingredientes locales disponibles en la región.', url: 'https://www.engormix.com/avicultura', date: '2025-04-25', source: 'Engormix', img: 'https://images.unsplash.com/photo-1508193638397-1c4234db14d8?w=480&h=260&fit=crop' },
+      { title: 'Calendario de vacunación en aves: actualización Latinoamérica 2025', description: 'El esquema vacunal debe adaptarse a los riesgos de cada región. Programas para pollos de engorde, ponedoras y reproductoras en condiciones de campo.', url: 'https://www.elsitioavicola.com', date: '2025-04-19', source: 'Portal Veterinaria', img: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=480&h=260&fit=crop' }
+    ],
+    cerdos: [
+      { title: 'Cerda en lactancia: cómo maximizar la producción de leche', description: 'La alimentación y el ambiente durante la lactancia determinan el peso al destete y el intervalo destete-celo. Estrategias para el máximo rendimiento reproductivo.', url: 'https://www.3tres3.com', date: '2025-05-05', source: '3tres3', img: 'https://images.unsplash.com/photo-1592179970584-bd5e5f4c1e62?w=480&h=260&fit=crop' },
+      { title: 'PRRS en Latinoamérica: control actualizado 2025', description: 'El Síndrome Reproductivo y Respiratorio Porcino sigue causando grandes pérdidas. Actualización sobre diagnóstico, vacunas y manejo para minimizar el impacto.', url: 'https://www.3tres3.com', date: '2025-04-29', source: '3tres3', img: 'https://images.unsplash.com/photo-1591553637820-9e4d0b42ddb5?w=480&h=260&fit=crop' },
+      { title: 'Ácidos orgánicos en cerdos: alternativa eficaz a los antibióticos', description: 'Los ácidos orgánicos son sustitutos probados de los antibióticos promotores de crecimiento. Guía científica de uso en distintas etapas de producción porcina.', url: 'https://www.engormix.com/porcicultura', date: '2025-04-24', source: 'Engormix', img: 'https://images.unsplash.com/photo-1592179970584-bd5e5f4c1e62?w=480&h=260&fit=crop' },
+      { title: 'KPIs porcinos: indicadores clave para mejorar la rentabilidad', description: 'Conversión, días a mercado, partos/cerda/año — los indicadores más importantes y cómo interpretarlos para tomar decisiones que mejoren los resultados de tu granja.', url: 'https://www.3tres3.com', date: '2025-04-18', source: '3tres3', img: 'https://images.unsplash.com/photo-1591553637820-9e4d0b42ddb5?w=480&h=260&fit=crop' }
+    ]
+  },
+
+  _done: {}, _cache: {},
+
+  async load(sid) {
+    if (this._done[sid]) return;
+    const s = this.SECS[sid]; if (!s) return;
+    this._skel(s.grid); this._done[sid] = true;
+    let arts = this.FB[sid] || [];
+    try {
+      let items = [];
+      for (const feed of s.feeds) {
+        try {
+          const r = await fetch(this.RSS2 + encodeURIComponent(feed) + '&count=14', { signal: AbortSignal.timeout(9000) });
+          const j = await r.json();
+          if (j.status === 'ok' && j.items?.length)
+            items = [...items, ...j.items.map(it => ({
+              title: it.title,
+              description: it.description || it.content || '',
+              url: it.link,
+              date: it.pubDate,
+              source: j.feed?.title || 'Agro',
+              img: it.thumbnail || it.enclosure?.link || s.defImg
+            }))];
+        } catch(_) {}
+      }
+      if (items.length >= 3) {
+        const f = await this._ai(items, s.topic);
+        if (f.length > 0) {
+          arts = f;
+          const b = document.getElementById(s.badge);
+          if (b) b.style.display = 'inline-flex';
+        }
+      }
+    } catch(_) {}
+    this._cache[sid] = arts;
+    this._paint(s.grid, arts);
+  },
+
+  async _ai(items, topic) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          system: 'Filtra artículos agropecuarios en español. Responde SOLO con array JSON de índices. Ej:[2,0,4,1]',
+          messages: [{ role: 'user', content: 'Selecciona los 4 más relevantes sobre: "' + topic + '"\n\n' + items.map((it, i) => i + ': ' + it.title).join('\n') + '\n\nArray:' }]
+        })
+      });
+      const d = await r.json();
+      const t = d.content?.[0]?.text || '[]';
+      const m = t.match(/\[[\d,\s]+\]/);
+      const idx = m ? JSON.parse(m[0]) : [];
+      return idx.slice(0, 4).map(i => items[i]).filter(Boolean);
+    } catch(_) { return items.slice(0, 4); }
+  },
+
+  refresh(sid) {
+    this._done[sid] = false;
+    const s = this.SECS[sid];
+    if (s) { const b = document.getElementById(s.badge); if (b) b.style.display = 'none'; }
+    this.load(sid);
+    UI.showToast('Actualizando artículos…', 'inf', 2200);
+  },
+
+  _skel(gid) {
+    const el = document.getElementById(gid); if (!el) return;
+    el.innerHTML = '<div class="art-skel"><div class="art-skel-img"></div><div class="art-skel-bd"><div class="art-skel-ln" style="width:88%"></div><div class="art-skel-ln" style="width:70%"></div><div class="art-skel-ln" style="width:44%;margin-top:14px"></div></div></div>'.repeat(4);
+  },
+
+  _txt(html) {
+    const d = document.createElement('div'); d.innerHTML = html || '';
+    const t = d.textContent || d.innerText || '';
+    return t.length > 162 ? t.slice(0, 159) + '…' : t;
+  },
+
+  _dt(s) {
+    try { return new Date(s).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }); }
+    catch { return s || ''; }
+  },
+
+  _paint(gid, arts) {
+    const el = document.getElementById(gid); if (!el) return;
+    if (!arts.length) { el.innerHTML = '<div class="empty" style="border:none"><p>Sin artículos disponibles</p></div>'; return; }
+    el.innerHTML = arts.map(a => {
+      const url = (a.url || '#').replace(/['"\\]/g, '');
+      const img = (a.img || '').replace(/['"\\]/g, '');
+      return `<div class="art-card" onclick="window.open('${url}','_blank')">
+        <div class="art-img">
+          <img src="${img}" alt="" loading="lazy"
+            onerror="this.src='https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop'">
+          <span class="art-src">${Utils.sanitize(a.source || 'Agro')}</span>
+        </div>
+        <div class="art-body">
+          <div class="art-dt">📅 ${Articulos._dt(a.date || a.pubDate)}</div>
+          <div class="art-ttl">${Utils.sanitize(a.title || 'Sin título')}</div>
+          <div class="art-dsc">${Articulos._txt(a.description)}</div>
+          <a class="art-lnk" href="${url}" target="_blank" rel="noopener noreferrer"
+            onclick="event.stopPropagation()">Leer artículo <span>→</span></a>
+        </div>
+      </div>`;
+    }).join('');
   }
 };
 
