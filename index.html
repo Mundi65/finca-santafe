@@ -4560,12 +4560,37 @@ const Admin = {
 const Articulos = {
 
   YT_KEY: 'AIzaSyD7uUZJtYMI86IuATKkEPo2VcFrZhJ91ss',
+  _qi: {},
   SECS: {
-    dashboard: { q: 'ganaderia bovina Colombia Argentina manejo finca tecnico', grid: 'dash-art-grid', badge: 'dash-art-badge' },
-    ganado: { q: 'ganaderia bovina pasturas sanidad genetica Colombia Argentina Uruguay', grid: 'gan-art-grid', badge: 'gan-art-badge' },
-    aves: { q: 'avicultura galpon pollos gallinas bioseguridad nutricion Colombia Argentina', grid: 'aves-art-grid', badge: 'aves-art-badge' },
-    cerdos: { q: 'porcicultura cerdo galpon tecnificado Colombia Argentina', grid: 'cerdos-art-grid', badge: 'cerdos-art-badge' },
-    agricola: { q: 'forraje balanceado maiz sorgo soya alimentacion animal bovina avicola porcina', grid: 'agri-art-grid', badge: 'agri-art-badge' }
+    dashboard: { grid:'dash-art-grid', badge:'dash-art-badge', qs:[
+      'ganaderia bovina Colombia Argentina manejo finca tecnico',
+      'agropecuario finca produccion pecuaria Colombia Ecuador',
+      'porcicultura avicultura ganaderia Colombia tecnificado',
+      'bovino lechero produccion leche pasturas Colombia Argentina'] },
+    ganado: { grid:'gan-art-grid', badge:'gan-art-badge', qs:[
+      'ganaderia bovina pasturas manejo Colombia Argentina Uruguay',
+      'bovino lechero produccion leche Colombia Ecuador manejo',
+      'sanidad bovina vacunas enfermedades bovinos Colombia',
+      'genetica bovina razas engorde feedlot Argentina Uruguay',
+      'manejo ganadero rotacion potreros forraje Colombia'] },
+    aves: { grid:'aves-art-grid', badge:'aves-art-badge', qs:[
+      'avicultura galpon pollos engorde bioseguridad Colombia',
+      'nutricion avicola alimentacion pollos gallinas Colombia',
+      'gallinas ponedoras produccion huevos manejo galpon',
+      'bioseguridad avicola enfermedades vacunas pollos Colombia',
+      'construccion galpon avicola tecnificado Colombia Argentina'] },
+    cerdos: { grid:'cerdos-art-grid', badge:'cerdos-art-badge', qs:[
+      'porcicultura cerdo galpon tecnificado Colombia Argentina',
+      'reproduccion porcina gestacion lactancia cerdo Colombia',
+      'nutricion porcina alimentacion cerdos engorde Colombia',
+      'sanidad porcina vacunas enfermedades cerdos Colombia',
+      'instalaciones porcinas chanchera tecnificada Colombia'] },
+    agricola: { grid:'agri-art-grid', badge:'agri-art-badge', qs:[
+      'forraje balanceado maiz sorgo soya alimentacion animal Colombia',
+      'produccion maiz forraje bovino porcino avicola Colombia',
+      'silos ensilaje forraje conservacion alimento bovino',
+      'balanceado artesanal formula alimentacion pollos cerdos vacas',
+      'cultivo sorgo soya proteina alimentacion animal Colombia'] }
   },
   FB: {
     dashboard: [
@@ -4603,7 +4628,10 @@ const Articulos = {
     let arts = [];
     try {
       // Llamar al proxy serverless que maneja YouTube API
-      const r = await fetch('/api/youtube?q=' + encodeURIComponent(s.q) + '&_t=' + Date.now(),
+      var qList = s.qs || [s.q || ''];
+      var qi = (this._qi[sid] || 0) % qList.length;
+      var qActual = qList[qi];
+      const r = await fetch('/api/youtube?q=' + encodeURIComponent(qActual) + '&_t=' + Date.now(),
         { signal: AbortSignal.timeout(15000) });
       const j = await r.json();
       if (j.items && j.items.length) {
@@ -4692,6 +4720,7 @@ const Articulos = {
   },
 
   refresh(sid) {
+    this._qi[sid] = ((this._qi[sid] || 0) + 1);
     this._done[sid] = false;
     const s = this.SECS[sid];
     if (s) { const b = document.getElementById(s.badge); if (b) b.style.display = 'none'; }
