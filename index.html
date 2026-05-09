@@ -4547,30 +4547,28 @@ const Admin = {
 // ARTÍCULOS — Noticias agropecuarias (RSS + IA)
 // =====================================================
 const Articulos = {
-  RSS2: 'https://api.rss2json.com/v1/api.json?rss_url=',
+
+  API_KEY: 'pub_d778b5e152d2405fa150b2a2f61e9cfb',
+  API_BASE: 'https://newsdata.io/api/1/news',
 
   SECS: {
     dashboard: {
-      feeds: ['https://www.agronegocios.es/feed/', 'https://agritotal.com/feed'],
-      topic: 'agricultura ganadería administración finca construcción alimentación',
+      q: 'ganaderia OR agricultura OR finca OR agropecuario',
       defImg: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop',
       grid: 'dash-art-grid', badge: 'dash-art-badge'
     },
     ganado: {
-      feeds: ['https://www.ganaderia.com/feed','https://www.agronegocios.es/feed/'],
-      topic: 'ganado bovino vacuno manejo alimentación sanidad producción',
+      q: 'ganado bovino vacuno ganaderia',
       defImg: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?w=480&h=260&fit=crop',
       grid: 'gan-art-grid', badge: 'gan-art-badge'
     },
     aves: {
-      feeds: ['https://www.elsitioavicola.com/rss.aspx','https://www.agronegocios.es/feed/'],
-      topic: 'avicultura pollo gallina producción bioseguridad nutrición',
+      q: 'avicultura pollos gallinas aves granja',
       defImg: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=480&h=260&fit=crop',
       grid: 'aves-art-grid', badge: 'aves-art-badge'
     },
     cerdos: {
-      feeds: ['https://www.3tres3.com/rss/articulos_es.xml','https://www.agronegocios.es/feed/'],
-      topic: 'porcicultura cerdo porcino nutrición manejo reproducción',
+      q: 'porcicultura cerdos porcino granja',
       defImg: 'https://images.unsplash.com/photo-1592179970584-bd5e5f4c1e62?w=480&h=260&fit=crop',
       grid: 'cerdos-art-grid', badge: 'cerdos-art-badge'
     }
@@ -4612,28 +4610,23 @@ const Articulos = {
     this._skel(s.grid); this._done[sid] = true;
     let arts = this.FB[sid] || [];
     try {
-      let items = [];
-      for (const feed of s.feeds) {
-        try {
-          const r = await fetch(this.RSS2 + encodeURIComponent(feed) + '&count=14', { signal: AbortSignal.timeout(9000) });
-          const j = await r.json();
-          if (j.status === 'ok' && j.items?.length)
-            items = [...items, ...j.items.map(it => ({
-              title: it.title,
-              description: it.description || it.content || '',
-              url: it.link,
-              date: it.pubDate,
-              source: j.feed?.title || 'Agro',
-              img: it.thumbnail || it.enclosure?.link || s.defImg
-            }))];
-        } catch(_) {}
-      }
-      if (items.length >= 3) {
-        const f = await this._ai(items, s.topic);
-        if (f.length > 0) {
-          arts = f;
+      const url = `${this.API_BASE}?apikey=${this.API_KEY}&q=${encodeURIComponent(s.q)}&language=es&size=8`;
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const j = await r.json();
+      if (j.status === 'success' && j.results?.length) {
+        arts = j.results.slice(0, 4).map(it => ({
+          title: it.title,
+          description: it.description || it.content || '',
+          url: it.link,
+          date: it.pubDate || it.pubDateTZ,
+          source: it.source_name || it.source_id || 'Noticias',
+          img: it.image_url || s.defImg
+        })).filter(a => a.url);
+        if (arts.length > 0) {
           const b = document.getElementById(s.badge);
           if (b) b.style.display = 'inline-flex';
+        } else {
+          arts = this.FB[sid] || [];
         }
       }
     } catch(_) {}
