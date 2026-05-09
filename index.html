@@ -4604,7 +4604,7 @@ const Articulos = {
     try {
       // Paso 1: Buscar videos en YouTube
       const ytUrl = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video'
-        + '&relevanceLanguage=es&maxResults=12&q=' + encodeURIComponent(s.q)
+        + '&relevanceLanguage=es&videoDuration=medium&maxResults=8&q=' + encodeURIComponent(s.q)
         + '&key=' + this.YT_KEY;
       const r = await fetch(ytUrl, { signal: AbortSignal.timeout(12000) });
       const j = await r.json();
