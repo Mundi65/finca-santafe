@@ -4610,7 +4610,10 @@ const Articulos = {
         // Filtrar por duracion: preferir 8+ min, aceptar 4+ min
         const durMap = {};
         j.items.forEach(function(it) {
-          if (it.duration) durMap[it.videoId] = Articulos._parseDur(it.duration);
+          if (it.duration) {
+            var dm = it.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            durMap[it.videoId] = dm ? (parseInt(dm[1]||0)*3600)+(parseInt(dm[2]||0)*60)+parseInt(dm[3]||0) : 0;
+          }
         });
         var v8 = j.items.filter(function(it) { return (durMap[it.videoId]||0) >= 480; });
         var v4 = j.items.filter(function(it) { return (durMap[it.videoId]||0) >= 240; });
