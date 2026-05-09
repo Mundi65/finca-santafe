@@ -4603,7 +4603,7 @@ const Articulos = {
     let arts = [];
     try {
       // Llamar al proxy serverless que maneja YouTube API
-      const r = await fetch('/api/youtube?q=' + encodeURIComponent(s.q),
+      const r = await fetch('/api/youtube?q=' + encodeURIComponent(s.q) + '&_t=' + Date.now(),
         { signal: AbortSignal.timeout(15000) });
       const j = await r.json();
       if (j.items && j.items.length) {
@@ -4617,7 +4617,11 @@ const Articulos = {
         });
         var v8 = j.items.filter(function(it) { return (durMap[it.videoId]||0) >= 480; });
         var v4 = j.items.filter(function(it) { return (durMap[it.videoId]||0) >= 240; });
-        var toUse = v8.length >= 2 ? v8 : (v4.length >= 1 ? v4 : j.items);
+        // Preferir 8min, completar con 4min, luego cualquiera hasta tener 4
+        var toUse = v8.length >= 4 ? v8.slice(0,6)
+          : v8.length >= 2 ? v8.concat(v4.filter(function(i){return !v8.includes(i);})).slice(0,6)
+          : v4.length >= 2 ? v4.slice(0,6)
+          : j.items.slice(0,6);
         const mapped = toUse.map(function(it) {
           var sec = durMap[it.videoId] || 0;
           var h = Math.floor(sec/3600), mn = Math.floor((sec%3600)/60), s2 = sec%60;
