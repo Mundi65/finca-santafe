@@ -4558,17 +4558,17 @@ const Articulos = {
       grid: 'dash-art-grid', badge: 'dash-art-badge'
     },
     ganado: {
-      q: 'bovino nutricion pasturas forraje Colombia Argentina Uruguay',
+      q: 'bovino OR ganaderia OR vacuno',
       defImg: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?w=480&h=260&fit=crop',
       grid: 'gan-art-grid', badge: 'gan-art-badge'
     },
     aves: {
-      q: 'avicultura nutricion bioseguridad galpon Colombia Argentina',
+      q: 'avicultura OR avicola OR pollo OR gallina',
       defImg: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=480&h=260&fit=crop',
       grid: 'aves-art-grid', badge: 'aves-art-badge'
     },
     cerdos: {
-      q: 'porcicultura cerdo nutricion galpon Colombia Argentina',
+      q: 'porcicultura OR porcino OR cerdo',
       defImg: 'https://images.unsplash.com/photo-1592179970584-bd5e5f4c1e62?w=480&h=260&fit=crop',
       grid: 'cerdos-art-grid', badge: 'cerdos-art-badge'
     }
@@ -4610,7 +4610,7 @@ const Articulos = {
     this._skel(s.grid); this._done[sid] = true;
     let arts = this.FB[sid] || [];
     try {
-      const url = `${this.API_BASE}?apikey=${this.API_KEY}&q=${encodeURIComponent(s.q)}&language=es&size=12&category=science,health,technology,environment`;
+      const url = `${this.API_BASE}?apikey=${this.API_KEY}&q=${encodeURIComponent(s.q)}&language=es&size=10`;
       const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
       const j = await r.json();
       if (j.status === 'success' && j.results?.length) {
