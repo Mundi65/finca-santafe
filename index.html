@@ -1377,6 +1377,17 @@ textarea.fc{resize:vertical;min-height:76px}
       </div>
     </div>
   </div>
+
+<!-- VIDEOS AGRICOLA -->
+<div class="art-section">
+  <div class="art-section-hdr">
+    <div class="art-section-title">🎬 Videos: Forrajes y Nutrición Animal
+      <span class="art-ai" id="agri-art-badge" style="display:none">▶ YouTube</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="Articulos.refresh('agricola')">Actualizar</button>
+  </div>
+  <div class="art-grid" id="agri-art-grid"></div>
+</div>
 </section>
 
 <!-- ================================================
@@ -2655,7 +2666,7 @@ const Nav = {
       perfil:PerfilFinca.load,calendario:Calendario.load, contactos:Contactos.load, inventario:Inventario.load, reportes:Reportes.load, admin:Admin.load, valentina:Valentina.load };
     if (loaders[id]) loaders[id]();
     // Cargar artículos para secciones que los tienen
-    if (['dashboard','ganado','aves','cerdos'].includes(id)) Articulos.load(id);
+    if (['dashboard','ganado','aves','cerdos','agricola'].includes(id)) Articulos.load(id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
@@ -4548,33 +4559,14 @@ const Admin = {
 // =====================================================
 const Articulos = {
 
-  API_KEY: 'pub_d778b5e152d2405fa150b2a2f61e9cfb',
-  API_BASE: 'https://newsdata.io/api/1/news',
-
+  YT_KEY: 'AIzaSyD7uUZJtYMI86IuATKkEPo2VcFrZhJ91ss',
   SECS: {
-    dashboard: {
-      q: 'ganaderia nutricion manejo agropecuario Ecuador Colombia Argentina',
-      defImg: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop',
-      grid: 'dash-art-grid', badge: 'dash-art-badge'
-    },
-    ganado: {
-      q: 'bovino OR ganaderia OR vacuno',
-      defImg: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?w=480&h=260&fit=crop',
-      grid: 'gan-art-grid', badge: 'gan-art-badge'
-    },
-    aves: {
-      q: 'avicultura OR avicola OR pollo OR gallina',
-      defImg: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=480&h=260&fit=crop',
-      grid: 'aves-art-grid', badge: 'aves-art-badge'
-    },
-    cerdos: {
-      q: 'porcicultura OR porcino OR cerdo',
-      defImg: 'https://images.unsplash.com/photo-1592179970584-bd5e5f4c1e62?w=480&h=260&fit=crop',
-      grid: 'cerdos-art-grid', badge: 'cerdos-art-badge'
-    }
+    dashboard: { q: 'ganaderia bovina Colombia Argentina manejo finca tecnico', grid: 'dash-art-grid', badge: 'dash-art-badge' },
+    ganado: { q: 'ganaderia bovina pasturas sanidad genetica Colombia Argentina Uruguay', grid: 'gan-art-grid', badge: 'gan-art-badge' },
+    aves: { q: 'avicultura galpon pollos gallinas bioseguridad nutricion Colombia Argentina', grid: 'aves-art-grid', badge: 'aves-art-badge' },
+    cerdos: { q: 'porcicultura cerdo galpon tecnificado Colombia Argentina', grid: 'cerdos-art-grid', badge: 'cerdos-art-badge' },
+    agricola: { q: 'forraje balanceado maiz sorgo soya alimentacion animal bovina avicola porcina', grid: 'agri-art-grid', badge: 'agri-art-badge' }
   },
-
-  // Artículos de respaldo cuando RSS falla
   FB: {
     dashboard: [
       { title: 'Engormix: la mayor red agropecuaria de Latinoamérica', description: 'La digitalización reduce pérdidas y mejora las decisiones. Apps de gestión, registros digitales y sistemas de seguimiento accesibles para fincas medianas.', url: 'https://www.agronegocios.es/', date: '2025-05-06', source: 'AgroNoticias', img: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=480&h=260&fit=crop' },
@@ -4608,31 +4600,34 @@ const Articulos = {
     if (this._done[sid]) return;
     const s = this.SECS[sid]; if (!s) return;
     this._skel(s.grid); this._done[sid] = true;
-    let arts = this.FB[sid] || [];
+    let arts = [];
     try {
-      const url = `${this.API_BASE}?apikey=${this.API_KEY}&q=${encodeURIComponent(s.q)}&language=es&size=10`;
-      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const ytUrl = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video'
+        + '&relevanceLanguage=es&maxResults=10&q=' + encodeURIComponent(s.q) + '&key=' + this.YT_KEY;
+      const r = await fetch(ytUrl, { signal: AbortSignal.timeout(12000) });
       const j = await r.json();
-      if (j.status === 'success' && j.results?.length) {
-        const allArts = j.results.map(it => ({
-          title: it.title,
-          description: it.description || it.content || '',
-          url: it.link,
-          date: it.pubDate || it.pubDateTZ,
-          source: it.source_name || it.source_id || 'Noticias',
-          img: it.image_url || s.defImg
-        })).filter(a => a.url);
-        arts = this._filtrar(allArts, s.q);
-        if (arts.length > 0) {
-          const b = document.getElementById(s.badge);
-          if (b) b.style.display = 'inline-flex';
-        } else {
-          arts = this._filtrar(this.FB[sid] || [], s.q);
+      if (j.items && j.items.length) {
+        const mapped = j.items.map(function(it) {
+          return { title: it.snippet.title, description: it.snippet.description || '',
+            url: 'https://www.youtube.com/watch?v=' + it.id.videoId,
+            date: it.snippet.publishedAt, source: it.snippet.channelTitle,
+            img: 'https://img.youtube.com/vi/' + it.id.videoId + '/mqdefault.jpg',
+            videoId: it.id.videoId };
+        });
+        const filtered = this._filtrar(mapped, s.q);
+        if (filtered.length > 0) {
+          arts = filtered;
+          var b = document.getElementById(s.badge);
+          if (b) { b.style.display = 'inline-flex'; b.textContent = '▶ YouTube'; }
         }
       }
-    } catch(_) {}
-    this._cache[sid] = arts;
-    this._paint(s.grid, arts);
+    } catch(e) { console.warn('YouTube:', e.message); }
+    if (!arts.length) {
+      arts = [{ title: 'Buscar videos en YouTube', description: 'Toca para buscar videos agropecuarios.',
+        url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(s.q),
+        date: new Date().toISOString(), source: 'YouTube', img: '', videoId: '' }];
+    }
+    this._cache[sid] = arts; this._paint(s.grid, arts);
   },
 
   _filtrar(items, q) {
@@ -4700,25 +4695,25 @@ const Articulos = {
   },
 
   _paint(gid, arts) {
-    const el = document.getElementById(gid); if (!el) return;
-    if (!arts.length) { el.innerHTML = '<div class="empty" style="border:none"><p>Sin artículos disponibles</p></div>'; return; }
-    el.innerHTML = arts.map(a => {
-      const url = (a.url || '#').replace(/['"\\]/g, '');
-      const img = (a.img || '').replace(/['"\\]/g, '');
-      return `<div class="art-card" onclick="window.open('${url}','_blank')">
-        <div class="art-img">
-          <img src="${img}" alt="" loading="lazy"
-            onerror="this.src='https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=480&h=260&fit=crop'">
-          <span class="art-src">${Utils.sanitize(a.source || 'Agro')}</span>
-        </div>
-        <div class="art-body">
-          <div class="art-dt">📅 ${Articulos._dt(a.date || a.pubDate)}</div>
-          <div class="art-ttl">${Utils.sanitize(a.title || 'Sin título')}</div>
-          <div class="art-dsc">${Articulos._txt(a.description)}</div>
-          <a class="art-lnk" href="${url}" target="_blank" rel="noopener noreferrer"
-            onclick="event.stopPropagation()">Leer artículo <span>→</span></a>
-        </div>
-      </div>`;
+    var el = document.getElementById(gid); if (!el) return;
+    if (!arts.length) { el.innerHTML = '<div class="empty" style="border:none"><p>Sin videos. Intenta Actualizar.</p></div>'; return; }
+    el.innerHTML = arts.map(function(a) {
+      var vu = a.url || 'https://www.youtube.com';
+      var vi = a.img || '';
+      var imgPart = vi
+        ? '<img src="'+vi+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
+        : '<div style="width:100%;height:100%;background:#111;display:flex;align-items:center;justify-content:center;font-size:3rem">▶</div>';
+      var safeVu = vu.replace(/'/g, '%27');
+      return '<div class="art-card" onclick="window.open(\''+safeVu+'\',\'_blank\')">'
+        + '<div class="art-img">' + imgPart
+        + '<div class="art-play"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>'
+        + '<span class="art-src">' + Utils.sanitize(a.source||'YouTube') + '</span></div>'
+        + '<div class="art-body">'
+        + '<div class="art-dt">' + Articulos._dt(a.date) + '</div>'
+        + '<div class="art-ttl">' + Utils.sanitize(a.title||'Sin titulo') + '</div>'
+        + '<div class="art-dsc">' + Articulos._txt(a.description) + '</div>'
+        + '<a class="art-lnk" href="'+vu+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">▶ Ver video →</a>'
+        + '</div></div>';
     }).join('');
   }
 };
