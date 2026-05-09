@@ -22,3 +22,16 @@ token*.txt
 clave*.txt
 prompt.txt
 borrar-demo.html
+.env.local
+
+# Scripts de utilidad locales
+*.py
+_check.js
+insert_perfil.py
+
+# Archivos temporales y debug
+*_debug.txt
+renderhoy*.txt
+css_cal.txt
+"index - copia.html"
+index\ -\ copia.html

@@ -4602,66 +4602,44 @@ const Articulos = {
     this._skel(s.grid); this._done[sid] = true;
     let arts = [];
     try {
-      // Paso 1: Buscar videos en YouTube
-      const ytUrl = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video'
-        + '&relevanceLanguage=es&videoDuration=medium&maxResults=8&q=' + encodeURIComponent(s.q)
-        + '&key=' + this.YT_KEY;
-      const r = await fetch(ytUrl, { signal: AbortSignal.timeout(12000) });
+      // Llamar al proxy serverless que maneja YouTube API
+      const r = await fetch('/api/youtube?q=' + encodeURIComponent(s.q),
+        { signal: AbortSignal.timeout(15000) });
       const j = await r.json();
       if (j.items && j.items.length) {
-        // Paso 2: Obtener duracion de cada video
-        const ids = j.items.map(function(it) { return it.id.videoId; }).join(',');
-        const durUrl = 'https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id='
-          + ids + '&key=' + this.YT_KEY;
-        const dr = await fetch(durUrl, { signal: AbortSignal.timeout(8000) });
-        const dj = await dr.json();
+        // Filtrar por duracion: preferir 8+ min, aceptar 4+ min
         const durMap = {};
-        (dj.items || []).forEach(function(v) {
-          durMap[v.id] = Articulos._parseDur(v.contentDetails.duration);
+        j.items.forEach(function(it) {
+          if (it.duration) durMap[it.videoId] = Articulos._parseDur(it.duration);
         });
-        // Paso 3: Filtrar por duracion minima (8 min = 480 seg)
-        const MIN_SEC = 480;
-        var itemsFiltrados = j.items.filter(function(it) {
-          return (durMap[it.id.videoId] || 0) >= MIN_SEC;
+        var v8 = j.items.filter(function(it) { return (durMap[it.videoId]||0) >= 480; });
+        var v4 = j.items.filter(function(it) { return (durMap[it.videoId]||0) >= 240; });
+        var toUse = v8.length >= 2 ? v8 : (v4.length >= 1 ? v4 : j.items);
+        const mapped = toUse.map(function(it) {
+          var sec = durMap[it.videoId] || 0;
+          var h = Math.floor(sec/3600), mn = Math.floor((sec%3600)/60), s2 = sec%60;
+          var durStr = sec > 0 ? (h > 0
+            ? h+':'+String(mn).padStart(2,'0')+':'+String(s2).padStart(2,'0')
+            : mn+':'+String(s2).padStart(2,'0')) : '';
+          return { title: it.title, description: it.description,
+            url: 'https://www.youtube.com/watch?v=' + it.videoId,
+            date: it.publishedAt, source: it.channelTitle,
+            img: it.thumbnail, videoId: it.videoId, durStr: durStr };
         });
-        // Si hay menos de 2 videos de 8min, bajar a 4min
-        if (itemsFiltrados.length < 2) {
-          itemsFiltrados = j.items.filter(function(it) {
-            return (durMap[it.id.videoId] || 0) >= 240;
-          });
-        }
-        if (itemsFiltrados.length > 0) {
-          const mapped = itemsFiltrados.map(function(it) {
-            var sec = durMap[it.id.videoId] || 0;
-            var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s2 = sec%60;
-            var durStr = h > 0
-              ? h + ':' + String(m).padStart(2,'0') + ':' + String(s2).padStart(2,'0')
-              : m + ':' + String(s2).padStart(2,'0');
-            return {
-              title: it.snippet.title,
-              description: it.snippet.description || '',
-              url: 'https://www.youtube.com/watch?v=' + it.id.videoId,
-              date: it.snippet.publishedAt,
-              source: it.snippet.channelTitle,
-              img: 'https://img.youtube.com/vi/' + it.id.videoId + '/mqdefault.jpg',
-              videoId: it.id.videoId,
-              durStr: durStr
-            };
-          });
-          const filtered = this._filtrar(mapped, s.q);
-          if (filtered.length > 0) {
-            arts = filtered;
-            var b = document.getElementById(s.badge);
-            if (b) { b.style.display = 'inline-flex'; b.textContent = '\u25b6 YouTube'; }
-          }
+        const filtered = this._filtrar(mapped, s.q);
+        if (filtered.length > 0) {
+          arts = filtered;
+          var b = document.getElementById(s.badge);
+          if (b) { b.style.display='inline-flex'; b.textContent='▶ YouTube'; }
         }
       }
-    } catch(e) { console.warn('YouTube:', e.message); }
+    } catch(e) { console.warn('YouTube proxy error:', e.message); }
     if (!arts.length) {
       arts = [{ title: 'Buscar videos en YouTube',
-        description: 'Toca para buscar videos tecnicos agropecuarios.',
+        description: 'Haz clic para buscar videos tecnicos agropecuarios.',
         url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(s.q),
-        date: new Date().toISOString(), source: 'YouTube', img: '', videoId: '', durStr: '' }];
+        date: new Date().toISOString(), source: 'YouTube',
+        img: '', videoId: '', durStr: '' }];
     }
     this._cache[sid] = arts; this._paint(s.grid, arts);
   },
