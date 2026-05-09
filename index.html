@@ -4602,30 +4602,66 @@ const Articulos = {
     this._skel(s.grid); this._done[sid] = true;
     let arts = [];
     try {
+      // Paso 1: Buscar videos en YouTube
       const ytUrl = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video'
-        + '&relevanceLanguage=es&maxResults=10&q=' + encodeURIComponent(s.q) + '&key=' + this.YT_KEY;
+        + '&relevanceLanguage=es&maxResults=12&q=' + encodeURIComponent(s.q)
+        + '&key=' + this.YT_KEY;
       const r = await fetch(ytUrl, { signal: AbortSignal.timeout(12000) });
       const j = await r.json();
       if (j.items && j.items.length) {
-        const mapped = j.items.map(function(it) {
-          return { title: it.snippet.title, description: it.snippet.description || '',
-            url: 'https://www.youtube.com/watch?v=' + it.id.videoId,
-            date: it.snippet.publishedAt, source: it.snippet.channelTitle,
-            img: 'https://img.youtube.com/vi/' + it.id.videoId + '/mqdefault.jpg',
-            videoId: it.id.videoId };
+        // Paso 2: Obtener duracion de cada video
+        const ids = j.items.map(function(it) { return it.id.videoId; }).join(',');
+        const durUrl = 'https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id='
+          + ids + '&key=' + this.YT_KEY;
+        const dr = await fetch(durUrl, { signal: AbortSignal.timeout(8000) });
+        const dj = await dr.json();
+        const durMap = {};
+        (dj.items || []).forEach(function(v) {
+          durMap[v.id] = Articulos._parseDur(v.contentDetails.duration);
         });
-        const filtered = this._filtrar(mapped, s.q);
-        if (filtered.length > 0) {
-          arts = filtered;
-          var b = document.getElementById(s.badge);
-          if (b) { b.style.display = 'inline-flex'; b.textContent = '▶ YouTube'; }
+        // Paso 3: Filtrar por duracion minima (8 min = 480 seg)
+        const MIN_SEC = 480;
+        var itemsFiltrados = j.items.filter(function(it) {
+          return (durMap[it.id.videoId] || 0) >= MIN_SEC;
+        });
+        // Si hay menos de 2 videos de 8min, bajar a 4min
+        if (itemsFiltrados.length < 2) {
+          itemsFiltrados = j.items.filter(function(it) {
+            return (durMap[it.id.videoId] || 0) >= 240;
+          });
+        }
+        if (itemsFiltrados.length > 0) {
+          const mapped = itemsFiltrados.map(function(it) {
+            var sec = durMap[it.id.videoId] || 0;
+            var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s2 = sec%60;
+            var durStr = h > 0
+              ? h + ':' + String(m).padStart(2,'0') + ':' + String(s2).padStart(2,'0')
+              : m + ':' + String(s2).padStart(2,'0');
+            return {
+              title: it.snippet.title,
+              description: it.snippet.description || '',
+              url: 'https://www.youtube.com/watch?v=' + it.id.videoId,
+              date: it.snippet.publishedAt,
+              source: it.snippet.channelTitle,
+              img: 'https://img.youtube.com/vi/' + it.id.videoId + '/mqdefault.jpg',
+              videoId: it.id.videoId,
+              durStr: durStr
+            };
+          });
+          const filtered = this._filtrar(mapped, s.q);
+          if (filtered.length > 0) {
+            arts = filtered;
+            var b = document.getElementById(s.badge);
+            if (b) { b.style.display = 'inline-flex'; b.textContent = '\u25b6 YouTube'; }
+          }
         }
       }
     } catch(e) { console.warn('YouTube:', e.message); }
     if (!arts.length) {
-      arts = [{ title: 'Buscar videos en YouTube', description: 'Toca para buscar videos agropecuarios.',
+      arts = [{ title: 'Buscar videos en YouTube',
+        description: 'Toca para buscar videos tecnicos agropecuarios.',
         url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(s.q),
-        date: new Date().toISOString(), source: 'YouTube', img: '', videoId: '' }];
+        date: new Date().toISOString(), source: 'YouTube', img: '', videoId: '', durStr: '' }];
     }
     this._cache[sid] = arts; this._paint(s.grid, arts);
   },
@@ -4707,7 +4743,9 @@ const Articulos = {
       return '<div class="art-card" onclick="window.open(\''+safeVu+'\',\'_blank\')">'
         + '<div class="art-img">' + imgPart
         + '<div class="art-play"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></div>'
-        + '<span class="art-src">' + Utils.sanitize(a.source||'YouTube') + '</span></div>'
+        + '<span class="art-src">' + Utils.sanitize(a.source||'YouTube') + '</span>'
+        + (a.durStr ? '<span class="art-dur">' + a.durStr + '</span>' : '')
+        + '</div>'
         + '<div class="art-body">'
         + '<div class="art-dt">' + Articulos._dt(a.date) + '</div>'
         + '<div class="art-ttl">' + Utils.sanitize(a.title||'Sin titulo') + '</div>'
