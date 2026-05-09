@@ -4614,7 +4614,7 @@ const Articulos = {
       const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
       const j = await r.json();
       if (j.status === 'success' && j.results?.length) {
-        arts = j.results.slice(0, 4).map(it => ({
+        const allArts = j.results.map(it => ({
           title: it.title,
           description: it.description || it.content || '',
           url: it.link,
@@ -4622,11 +4622,12 @@ const Articulos = {
           source: it.source_name || it.source_id || 'Noticias',
           img: it.image_url || s.defImg
         })).filter(a => a.url);
+        arts = this._filtrar(allArts, s.q);
         if (arts.length > 0) {
           const b = document.getElementById(s.badge);
           if (b) b.style.display = 'inline-flex';
         } else {
-          arts = this.FB[sid] || [];
+          arts = this._filtrar(this.FB[sid] || [], s.q);
         }
       }
     } catch(_) {}
@@ -4634,24 +4635,37 @@ const Articulos = {
     this._paint(s.grid, arts);
   },
 
-  async _ai(items, topic) {
-    try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 200,
-          system: 'Eres curador de contenido agropecuario para Ecuador. Prioriza: 1) Tecnicas avanzadas de Argentina, Uruguay, Colombia en ganaderia, porcicultura y avicultura. 2) Nutricion, pasturas, forrajes, genetica, bioseguridad, galpones tecnificados. 3) Investigaciones cientificas aplicables. 4) Noticias tecnicas de Ecuador o Latinoamerica. EXCLUIR: politica de otros paises, regulaciones internacionales, conflictos gremiales, precios de bolsa. Responde SOLO con array JSON de indices. Ej:[2,0,4,1]',
-          messages: [{ role: 'user', content: 'Tema: ' + topic + '. Soy productor en Ecuador. Quiero tecnicas de Argentina, Uruguay y Colombia. Prioriza: nutricion, pasturas, forrajes, instalaciones, genetica, sanidad. Evita politica de otros paises.\n\nArticulos:\n' + items.map((it, i) => i + ': ' + it.title).join('\n') + '\n\nArray:' }]
-        })
-      });
-      const d = await r.json();
-      const t = d.content?.[0]?.text || '[]';
-      const m = t.match(/\[[\d,\s]+\]/);
-      const idx = m ? JSON.parse(m[0]) : [];
-      return idx.slice(0, 4).map(i => items[i]).filter(Boolean);
-    } catch(_) { return items.slice(0, 4); }
+  _filtrar(items, q) {
+    // Filtro local por palabras clave - funciona sin API key
+    const topKw = (q || '').toLowerCase().replace(/ OR /gi, ' ').split(/\s+/).filter(Boolean);
+    const tecKw = ['nutricion','nutrición','manejo','sanidad','genética','genetica',
+      'forraje','pastura','bioseguridad','vacuna','engorde','reproduccion','reproducción',
+      'lactancia','peso','raza','produccion','producción','galpon','galpón',
+      'lechon','lechón','suplemento','mineral','proteina','vitamina','hato',
+      'ciclo','rendimiento','conversion','conversión','inseminacion','destete',
+      'antibiotico','mortalidad','fertilidad','crecimiento','alimento','pasto',
+      'balanceado','granja','bovino','porcino','avicola','avícola','ganaderia',
+      'ganadería','pecuario','agropecuario','especie','raza','engorda','ceba'];
+    const excKw = ['messi','mbappé','mbappe','neymar','ronaldo','futbol','fútbol',
+      'mundial 2026','copa del mundo','restaurante','receta','día de las madres',
+      'madre','mamá','política','politica','elección','eleccion','senado','congreso',
+      'diputado','supermercado','mercadona','lidl','carrefour','walmart','boda',
+      'accidente','crimen','robo','detenido','corona','funeral','amenaza',
+      'tiktok','netflix','película','canción','cantante','actor','actriz',
+      'taiwan','corea','china','rusia','ucrania','israel','gaza'];
+
+    const scored = items.map(it => {
+      const txt = ((it.title || '') + ' ' + (it.description || '')).toLowerCase();
+      let score = 0;
+      topKw.forEach(kw => { if (kw.length > 3 && txt.includes(kw)) score += 3; });
+      tecKw.forEach(kw => { if (txt.includes(kw)) score += 2; });
+      excKw.forEach(kw => { if (txt.includes(kw)) score -= 15; });
+      return { it, score };
+    });
+
+    const buenos = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+    const fuente = buenos.length >= 2 ? buenos : scored.sort((a, b) => b.score - a.score);
+    return fuente.slice(0, 4).map(s => s.it);
   },
 
   refresh(sid) {
