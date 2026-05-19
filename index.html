@@ -4419,13 +4419,15 @@ const PerfilFinca = {
     try {
       const data = { updatedAt: new Date().toISOString() };
       this._fields.forEach(f => {
-        const el = document.getElementById('pf-' + f);
-        if(el) data[f] = el.value;
-      });
+      const els = document.querySelectorAll('[id="pf-' + f + '"]');
+      const el = els.length ? els[els.length - 1] : null;
+      if(el) data[f] = el.value;
+    });
       this._checks.forEach(f => {
-        const el = document.getElementById('pf-' + f);
-        if(el) data[f] = el.checked;
-      });
+      const els = document.querySelectorAll('[id="pf-' + f + '"]');
+      const el = els.length ? els[els.length - 1] : null;
+      if(el) data[f] = el.checked;
+    });
       await App.db.collection('finca').doc('perfil').set(data, { merge: true });
       msg.innerHTML = '<span style="color:var(--ok)">✅ Perfil guardado correctamente</span>';
       setTimeout(() => msg.innerHTML = '', 3000);
