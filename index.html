@@ -4432,11 +4432,13 @@ const PerfilFinca = {
       if(!doc.exists) return;
       const d = doc.data();
       this._fields.forEach(f => {
-        const el = document.getElementById('pf-' + f);
+        const els = document.querySelectorAll('[id="pf-' + f + '"]');
+        const el = els.length ? els[els.length - 1] : null;
         if(el && d[f] !== undefined) el.value = d[f];
       });
       this._checks.forEach(f => {
-        const el = document.getElementById('pf-' + f);
+        const els = document.querySelectorAll('[id="pf-' + f + '"]');
+        const el = els.length ? els[els.length - 1] : null;
         if(el && d[f] !== undefined) el.checked = d[f];
       });
     } catch(e) { console.error('PerfilFinca.load:', e); }
