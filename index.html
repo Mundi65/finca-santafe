@@ -2779,6 +2779,8 @@ const Dashboard = {
           </div>
         </div>`;
       }).join('') : '<div class="empty" style="padding:20px;border:none"><p>Sin tareas pendientes</p></div>';
+      const tarClone = document.getElementById('dash-tareas-hoy');
+      if (tarClone) tarClone.innerHTML = tarEl.innerHTML;
 
       // Recurring events
       const today = Utils.today();
@@ -4800,11 +4802,16 @@ const Articulos = {
 };
 
 
-// Mover tareas al bloque hoy-wrap al cargar dashboard
+// Clonar tareas en hoy-wrap (original queda oculto por CSS en .two-col)
 function _dashReorderDOM() {
   var hw = document.getElementById('dash-hoy-wrap');
   var t = document.getElementById('dash-tareas');
-  if (hw && t && !hw.contains(t)) { hw.appendChild(t); }
+  if (!hw || !t) return;
+  if (!document.getElementById('dash-tareas-hoy')) {
+    var clone = t.cloneNode(true);
+    clone.id = 'dash-tareas-hoy';
+    hw.appendChild(clone);
+  }
 }
 // =====================================================
 // SERVICE WORKER + INIT
