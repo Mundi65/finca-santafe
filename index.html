@@ -2128,7 +2128,7 @@ textarea.fc{resize:vertical;min-height:76px}
     </div>
     <div class="val-chat" id="val-chat"></div>
     <div class="val-inp-wrap"><input type="file" id="val-file-input" accept="image/*,.pdf,.txt,.md,.csv" style="display:none" onchange="Valentina._onFile(this)"><div id="val-attach-preview" style="display:none" class="val-attach-preview"><span class="vap-icon" id="val-ap-icon"></span><span class="vap-name" id="val-ap-name"></span><button class="vap-rm" onclick="Valentina._removeFile()" title="Quitar archivo">×</button></div>
-      <textarea id="val-input" class="val-inp" placeholder="Pregúntale algo a Valentina…" rows="1" disabled></textarea>
+      <button id="val-attach-btn" class="val-attach-btn" onclick="document.getElementById('val-file-input').click()" title="Adjuntar imagen o PDF">📎</button><textarea id="val-input" class="val-inp" placeholder="Pregúntale algo a Valentina…" rows="1" disabled></textarea>
       <button class="val-snd" id="val-send" onclick="Valentina.send()" disabled aria-label="Enviar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
@@ -5069,6 +5069,31 @@ ${prox.map(e=>`- ${toDateStr(e.fecha)}: ${e.titulo||e.nombre||'Sin título'}${e.
     }
 
     return ctx.join('\n\n') || 'No hay datos registrados aún en la finca.';
+  },
+
+  _pendingFile: null,
+
+  _onFile(input) {
+    const f = input.files[0]; if (!f) return;
+    if (f.size > 8*1024*1024) { UI.showToast('Máx 8 MB', 'err', 3000); return; }
+    const r = new FileReader();
+    r.onload = e => {
+      this._pendingFile = { name: f.name, type: f.type, base64: e.target.result.split(',')[1] };
+      const p = document.getElementById('val-attach-preview');
+      if (p) {
+        p.style.display = 'flex';
+        document.getElementById('val-ap-icon').textContent = f.type.startsWith('image/') ? '🖼️' : '📄';
+        document.getElementById('val-ap-name').textContent = f.name;
+      }
+      UI.showToast('Archivo listo para enviar', 'ok', 2000);
+    };
+    r.readAsDataURL(f); input.value = '';
+  },
+
+  _removeFile() {
+    this._pendingFile = null;
+    const p = document.getElementById('val-attach-preview');
+    if (p) p.style.display = 'none';
   },
 
   async send() {
